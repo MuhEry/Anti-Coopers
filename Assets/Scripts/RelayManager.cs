@@ -17,6 +17,7 @@ public class RelayManager : MonoBehaviour
     [SerializeField] private GameObject lobbyPanel;
 
     [Header("UI Metin Elemanları")]
+    [SerializeField] private UnityEngine.UI.Button startGameButton;
     [SerializeField] private TMP_InputField codeInputField; 
     [SerializeField] private TMP_Text lobbyCodeText;
     [SerializeField] private TMP_Text playerListText;
@@ -142,11 +143,35 @@ public class RelayManager : MonoBehaviour
     public void UpdatePlayerListUI()
     {
         LobbyPlayer[] players = FindObjectsByType<LobbyPlayer>(FindObjectsSortMode.None);
+        bool allReady = true;
         
         playerListText.text = "ODADAKİ OYUNCULAR:\n";
         foreach (LobbyPlayer player in players)
         {
-            playerListText.text += $"- {player.playerName.Value}\n";
+            string readyStatus = player.isReady.Value ? "<color=green>[HAZIR]</color>" : "<color=red>[BEKLİYOR]</color>";
+            playerListText.text += $"- {player.playerName.Value} {readyStatus}\n";
+            
+            if (!player.isReady.Value) allReady = false;
+        }
+
+        // Sadece Host "Başlat" butonunu yönetebilir
+        if (NetworkManager.Singleton.IsHost)
+        {
+            // Herkes hazırsa ve en az 2 kişi varsa (test için 1 yapabilirsin) başlat butonu aktif olur
+            startGameButton.interactable = allReady && players.Length >= 1; 
+        }
+    }
+    public void OnReadyClicked()
+    {
+        NetworkManager.Singleton.LocalClient.PlayerObject.GetComponent<LobbyPlayer>().ToggleReadyServerRpc();
+    }
+
+    public void OnStartGameClicked()
+    {
+        if (NetworkManager.Singleton.IsHost)
+        {
+            // Ağ üzerinden sahne geçişi (Tüm oyuncuları aynı anda oyun sahnesine taşır)
+            NetworkManager.Singleton.SceneManager.LoadScene("GameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }
 }
