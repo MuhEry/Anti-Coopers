@@ -6,27 +6,47 @@ using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
 using TMPro;
-using System.Threading.Tasks; // Task geciktirmeleri için şart
+using System.Threading.Tasks;
 
 public class RelayManager : MonoBehaviour
 {
+    public static RelayManager Instance { get; private set; }
+
+    [Header("UI Panelleri")]
+    [SerializeField] private GameObject mainMenuPanel;
+    [SerializeField] private GameObject lobbyPanel;
+
+    [Header("UI Metin Elemanları")]
     [SerializeField] private TMP_InputField codeInputField; 
+    [SerializeField] private TMP_Text lobbyCodeText;
+    [SerializeField] private TMP_Text playerListText;
+
+    [HideInInspector] public string LocalProfileName;
+
+    private void Awake()
+    {
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
+    }
 
     async void Start()
     {
+        // Oyun başında panellerin doğru açılmasını sağlıyoruz
+        mainMenuPanel.SetActive(true);
+        lobbyPanel.SetActive(false);
+
         try
         {
-            // 1. BİZİM ÇÖZÜM: Aynı bilgisayarda çakışmayı önlemek için benzersiz profil üretiyoruz
             InitializationOptions options = new InitializationOptions();
-            string uniqueProfileName = "Player_" + Random.Range(1000, 9999);
-            options.SetProfile(uniqueProfileName);
+            LocalProfileName = "Player_" + Random.Range(1000, 9999);
+            options.SetProfile(LocalProfileName);
 
             await UnityServices.InitializeAsync(options);
             
             if (!AuthenticationService.Instance.IsSignedIn)
             {
                 await AuthenticationService.Instance.SignInAnonymouslyAsync();
-                Debug.Log($"[{uniqueProfileName}] Bulut Sistemine Giriş Yaptı. ID: " + AuthenticationService.Instance.PlayerId);
+                Debug.Log($"[{LocalProfileName}] Bulut Sistemine Giriş Yaptı.");
             }
         }
         catch (System.Exception e)
@@ -38,10 +58,8 @@ public class RelayManager : MonoBehaviour
     // ODA KURMA (HOST)
     public async void CreateRelay()
     {
-        // CLAUDE'UN ÖNERİSİ: Eğer eski bir otomatik bağlantı varsa durdur ve 500ms bekle
         if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsClient || NetworkManager.Singleton.IsServer)
         {
-            Debug.Log("Eski Host bağlantısı temizleniyor...");
             NetworkManager.Singleton.Shutdown();
             await Task.Delay(500); 
         }
@@ -63,7 +81,13 @@ public class RelayManager : MonoBehaviour
                     allocation.Key,
                     allocation.ConnectionData
                 );
+                
                 NetworkManager.Singleton.StartHost();
+
+                // PANEL GEÇİŞLERİ VE KODU YAZDIRMA
+                lobbyCodeText.text = "ODA KODU: " + joinCode;
+                mainMenuPanel.SetActive(false);
+                lobbyPanel.SetActive(true);
             }
         }
         catch (RelayServiceException e)
@@ -75,12 +99,10 @@ public class RelayManager : MonoBehaviour
     // ODAYA KATILMA (CLIENT)
     public async void JoinRelay() 
     {
-        // CLAUDE'UN ÖNERİSİ: Eğer otomatik başlayan client varsa durdur ve 500ms bekle
         if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsClient || NetworkManager.Singleton.IsServer)
         {
-            Debug.Log("Eski otomatik Client bağlantısı temizleniyor...");
             NetworkManager.Singleton.Shutdown();
-            await Task.Delay(500); // Ağın tamamen kapanması için gereken altın süre
+            await Task.Delay(500);
         }
 
         try
@@ -103,12 +125,28 @@ public class RelayManager : MonoBehaviour
                 );
                 
                 NetworkManager.Singleton.StartClient();
-                Debug.Log("Tebrikler! Odaya Başarıyla Katılabilindi.");
+
+                // PANEL GEÇİŞLERİ VE KODU YAZDIRMA
+                lobbyCodeText.text = "ODA KODU: " + joinCode;
+                mainMenuPanel.SetActive(false);
+                lobbyPanel.SetActive(true);
             }
         }
         catch (RelayServiceException e)
         {
             Debug.LogError("Odaya katılırken Relay hatası: " + e.Message);
+        }
+    }
+
+    // Oyuncu listesini ekranda tazeleyen fonksiyon (Unity 6 optimize uyumlu)
+    public void UpdatePlayerListUI()
+    {
+        LobbyPlayer[] players = FindObjectsByType<LobbyPlayer>(FindObjectsSortMode.None);
+        
+        playerListText.text = "ODADAKİ OYUNCULAR:\n";
+        foreach (LobbyPlayer player in players)
+        {
+            playerListText.text += $"- {player.playerName.Value}\n";
         }
     }
 }
