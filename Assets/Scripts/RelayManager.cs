@@ -7,6 +7,7 @@ using Unity.Services.Relay.Models;
 using UnityEngine;
 using TMPro;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 public class RelayManager : MonoBehaviour
 {
@@ -17,22 +18,34 @@ public class RelayManager : MonoBehaviour
     [SerializeField] private GameObject lobbyPanel;
 
     [Header("UI Metin Elemanları")]
-    [SerializeField] private UnityEngine.UI.Button startGameButton;
     [SerializeField] private TMP_InputField codeInputField; 
     [SerializeField] private TMP_Text lobbyCodeText;
     [SerializeField] private TMP_Text playerListText;
+    [SerializeField] private UnityEngine.UI.Button startGameButton;
+
+    [Header("Oyun İçi Doğum Ayarları")]
+    [SerializeField] private GameObject gamePlayerPrefab; // Yeni ekledik: GamePlayer Prefab slotu
 
     [HideInInspector] public string LocalProfileName;
+    
+    // Bağlanan oyuncuların isim ve renk bilgilerini sahneler arası taşımak için liste
+    private Dictionary<ulong, (string name, Color color)> savedPlayerData = new Dictionary<ulong, (string, Color)>();
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject); // Sahne değiştiğinde RelayManager yok olmasın
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     async void Start()
     {
-        // Oyun başında panellerin doğru açılmasını sağlıyoruz
         mainMenuPanel.SetActive(true);
         lobbyPanel.SetActive(false);
 
@@ -43,7 +56,6 @@ public class RelayManager : MonoBehaviour
             options.SetProfile(LocalProfileName);
 
             await UnityServices.InitializeAsync(options);
-            
             if (!AuthenticationService.Instance.IsSignedIn)
             {
                 await AuthenticationService.Instance.SignInAnonymouslyAsync();
@@ -56,7 +68,6 @@ public class RelayManager : MonoBehaviour
         }
     }
 
-    // ODA KURMA (HOST)
     public async void CreateRelay()
     {
         if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsClient || NetworkManager.Singleton.IsServer)
@@ -70,8 +81,6 @@ public class RelayManager : MonoBehaviour
             Allocation allocation = await RelayService.Instance.CreateAllocationAsync(3);
             string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
             
-            Debug.Log("Oda Başarıyla Kuruldu! ODA KODUNUZ: " + joinCode);
-
             UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
             if (transport != null)
             {
@@ -84,8 +93,10 @@ public class RelayManager : MonoBehaviour
                 );
                 
                 NetworkManager.Singleton.StartHost();
+                
+                // Sahne geçiş dinleyicisini sadece Host tarafında aktif ediyoruz
+                NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadCompleted;
 
-                // PANEL GEÇİŞLERİ VE KODU YAZDIRMA
                 lobbyCodeText.text = "ODA KODU: " + joinCode;
                 mainMenuPanel.SetActive(false);
                 lobbyPanel.SetActive(true);
@@ -97,7 +108,6 @@ public class RelayManager : MonoBehaviour
         }
     }
 
-    // ODAYA KATILMA (CLIENT)
     public async void JoinRelay() 
     {
         if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsClient || NetworkManager.Singleton.IsServer)
@@ -109,8 +119,6 @@ public class RelayManager : MonoBehaviour
         try
         {
             string joinCode = codeInputField.text; 
-            Debug.Log("Odaya katılınmaya çalışılıyor, Kod: " + joinCode);
-            
             JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
 
             UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
@@ -127,7 +135,6 @@ public class RelayManager : MonoBehaviour
                 
                 NetworkManager.Singleton.StartClient();
 
-                // PANEL GEÇİŞLERİ VE KODU YAZDIRMA
                 lobbyCodeText.text = "ODA KODU: " + joinCode;
                 mainMenuPanel.SetActive(false);
                 lobbyPanel.SetActive(true);
@@ -139,39 +146,77 @@ public class RelayManager : MonoBehaviour
         }
     }
 
-    // Oyuncu listesini ekranda tazeleyen fonksiyon (Unity 6 optimize uyumlu)
     public void UpdatePlayerListUI()
     {
+        if (playerListText == null || !lobbyPanel.activeInHierarchy) return;
+
         LobbyPlayer[] players = FindObjectsByType<LobbyPlayer>(FindObjectsSortMode.None);
         bool allReady = true;
         
         playerListText.text = "ODADAKİ OYUNCULAR:\n";
+        savedPlayerData.Clear();
+
         foreach (LobbyPlayer player in players)
         {
             string readyStatus = player.isReady.Value ? "<color=green>[HAZIR]</color>" : "<color=red>[BEKLİYOR]</color>";
             playerListText.text += $"- {player.playerName.Value} {readyStatus}\n";
             
             if (!player.isReady.Value) allReady = false;
+
+            // Verileri ileride gerçek dünyada doğururken kullanmak üzere hafızaya kaydediyoruz
+            if (!savedPlayerData.ContainsKey(player.OwnerClientId))
+            {
+                savedPlayerData.Add(player.OwnerClientId, (player.playerName.Value.ToString(), player.playerColor.Value));
+            }
         }
 
-        // Sadece Host "Başlat" butonunu yönetebilir
         if (NetworkManager.Singleton.IsHost)
         {
-            // Herkes hazırsa ve en az 2 kişi varsa (test için 1 yapabilirsin) başlat butonu aktif olur
+            // BOZULAN ÖZELLİK DÜZELTİLDİ: Herkes hazırsa ve lobi boş değilse buton açılır
             startGameButton.interactable = allReady && players.Length >= 1; 
         }
     }
+
     public void OnReadyClicked()
     {
-        NetworkManager.Singleton.LocalClient.PlayerObject.GetComponent<LobbyPlayer>().ToggleReadyServerRpc();
+        if (NetworkManager.Singleton.LocalClient != null && NetworkManager.Singleton.LocalClient.PlayerObject != null)
+        {
+            NetworkManager.Singleton.LocalClient.PlayerObject.GetComponent<LobbyPlayer>().ToggleReadyServerRpc();
+        }
     }
 
     public void OnStartGameClicked()
     {
         if (NetworkManager.Singleton.IsHost)
         {
-            // Ağ üzerinden sahne geçişi (Tüm oyuncuları aynı anda oyun sahnesine taşır)
             NetworkManager.Singleton.SceneManager.LoadScene("GameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
+        }
+    }
+
+    // YENİ: Oyun sahnesi yüklendiğinde üst üste doğmayı engelleyen ve verileri aktaran fonksiyon
+    private void OnSceneLoadCompleted(string sceneName, UnityEngine.SceneManagement.LoadSceneMode loadMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
+    {
+        if (sceneName == "GameScene")
+        {
+            int spawnIndex = 0;
+            foreach (ulong clientId in clientsCompleted)
+            {
+                // ÜST ÜSTE DOĞMA DÜZELTİLDİ: Her oyuncuya farklı bir X pozisyonu atıyoruz
+                Vector3 spawnPosition = new Vector3(spawnIndex * 2.5f, 1f, 0f);
+                
+                GameObject newPlayer = Instantiate(gamePlayerPrefab, spawnPosition, Quaternion.identity);
+                newPlayer.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId, true);
+
+                // İsmi ve rengi yeni karaktere giydiriyoruz
+                if (savedPlayerData.TryGetValue(clientId, out var data))
+                {
+                    PlayerController controller = newPlayer.GetComponent<PlayerController>();
+                    controller.networkPlayerName.Value = data.name;
+                    controller.networkPlayerColor.Value = data.color;
+                }
+
+                spawnIndex++;
+            }
         }
     }
 }
