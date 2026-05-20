@@ -219,4 +219,19 @@ public class RelayManager : MonoBehaviour
             }
         }
     }
+    // Odadan Temiz Çıkış Yapma Fonksiyonu
+    public void LeaveLobby()
+    {
+        if (NetworkManager.Singleton != null)
+        {
+            // Ağ bağlantısını tamamen kapat
+            NetworkManager.Singleton.Shutdown();
+        }
+
+        // UI panellerini eski haline getir
+        lobbyPanel.SetActive(false);
+        mainMenuPanel.SetActive(true);
+        
+        Debug.Log("Odadan başarıyla çıkış yapıldı.");
+    }
 }
