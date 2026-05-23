@@ -9,9 +9,8 @@ public class PlayerController : NetworkBehaviour
     [Header("Hareket Ayarları")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private MeshRenderer bodyRenderer;
-    [SerializeField] private TMP_Text nameTagText; // Karakterin kafasındaki yazı nesnesi
+    [SerializeField] private TMP_Text nameTagText; 
 
-    // Ağda oyuncunun ismini ve rengini taşımak için senkronize değişkenler
     public NetworkVariable<FixedString32Bytes> networkPlayerName = new NetworkVariable<FixedString32Bytes>("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<Color> networkPlayerColor = new NetworkVariable<Color>(Color.white, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
@@ -25,21 +24,25 @@ public class PlayerController : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        // Değerler ağda değiştikçe görseli güncelle
         networkPlayerName.OnValueChanged += (oldV, newV) => UpdateNameTag(newV.ToString());
         networkPlayerColor.OnValueChanged += (oldV, newV) => UpdateColor(newV);
 
         if (IsOwner)
         {
-            // Lobi yöneticisinden kendi ismimizi çekip sunucuya gönderiyoruz
             string localName = RelayManager.Instance != null ? RelayManager.Instance.LocalProfileName : "Player";
-            Color randomColor = new Color(Random.value, Random.value, Random.value);
             
-            SetPlayerDataServerRpc(localName, randomColor);
+            // HATAYI DÜZELTTİK: Rastgele renk üretmeyi sildik. 
+            // Eğer RelayManager hafızasında rengimiz varsa onu alıyoruz, yoksa beyaz doğuyoruz.
+            Color myLobbyColor = Color.white;
+            if (RelayManager.Instance != null && RelayManager.Instance.GetMySavedColor(OwnerClientId, out Color savedColor))
+            {
+                myLobbyColor = savedColor;
+            }
+
+            SetPlayerDataServerRpc(localName, myLobbyColor);
         }
         else
         {
-            // Diğer oyuncuların mevcut verilerini uygula
             UpdateNameTag(networkPlayerName.Value.ToString());
             UpdateColor(networkPlayerColor.Value);
         }
@@ -49,7 +52,6 @@ public class PlayerController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        // Yeni Input System girdileri
         if (Keyboard.current != null)
         {
             float moveX = 0f;
@@ -80,15 +82,8 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    private void UpdateNameTag(string name)
-    {
-        if (nameTagText != null) nameTagText.text = name;
-    }
-
-    private void UpdateColor(Color color)
-    {
-        if (bodyRenderer != null) bodyRenderer.material.color = color;
-    }
+    private void UpdateNameTag(string name) { if (nameTagText != null) nameTagText.text = name; }
+    private void UpdateColor(Color color) { if (bodyRenderer != null) bodyRenderer.material.color = color; }
 
     [ServerRpc]
     private void SetPlayerDataServerRpc(string name, Color color)

@@ -17,11 +17,11 @@ public class LobbyPlayer : NetworkBehaviour
         isReady.OnValueChanged += OnPlayerReadyChanged;
         playerColor.OnValueChanged += OnPlayerColorChanged;
 
-        // LOBİDE ÜST ÜSTE DOĞMA ÇÖZÜLDÜ: Oyuncu ID'sine göre lobi sahnesinde yan yana diziyoruz
         transform.position = new Vector3(OwnerClientId * 2.0f, 1.0f, 0f);
 
         if (IsOwner)
         {
+            // İlk girişte varsayılan rastgele bir renk atıyoruz
             Color randomColor = new Color(Random.value, Random.value, Random.value);
             SetPlayerDataServerRpc(RelayManager.Instance.LocalProfileName, randomColor);
         }
@@ -33,22 +33,24 @@ public class LobbyPlayer : NetworkBehaviour
         if (RelayManager.Instance != null) RelayManager.Instance.UpdatePlayerListUI();
     }
 
-    // YENİ: Sahne değişirken bu lobi objesinin tamamen silinmesini garanti ediyoruz
+    // YENİ: Oyuncunun lobide butonla kendi rengini seçmesini sağlayan fonksiyon
+    [ServerRpc]
+    public void SelectColorServerRpc(Color newColor)
+    {
+        playerColor.Value = newColor;
+    }
+
     private void Awake()
     {
-        // Eğer bu obje DontDestroyOnLoad moduna girmişse engellemek için
         UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnSceneChanged;
     }
 
     private void OnSceneChanged(UnityEngine.SceneManagement.Scene oldScene, UnityEngine.SceneManagement.Scene newScene)
     {
-        if (newScene.name == "GameScene")
+        // Harita ismi "MiniGame_" ile başlıyorsa lobi kapsüllerini temizle
+        if (newScene.name.StartsWith("MiniGame_") || newScene.name == "GameScene")
         {
-            // Yeni sahneye geçildiyse ve bu obje sunucu tarafındaysa ağdan temizle
-            if (IsServer)
-            {
-                GetComponent<NetworkObject>().Despawn(true);
-            }
+            if (IsServer) GetComponent<NetworkObject>().Despawn(true);
         }
     }
 
