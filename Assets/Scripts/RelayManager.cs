@@ -200,7 +200,31 @@ public class RelayManager : MonoBehaviour
             NetworkManager.Singleton.SceneManager.LoadScene(gamePlaylist[currentMapIndex], UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }
+    // Her oyuncunun ulong türündeki ID'sine karşılık gelen toplam skor tablosu
+    private Dictionary<ulong, int> playerScores = new Dictionary<ulong, int>();
 
+    // Oyun içi yöneticilerin oyunculara puan ekleyebilmesi için fonksiyon
+    public void AddScore(ulong clientId, int points)
+    {
+        if (!NetworkManager.Singleton.IsServer) return;
+
+        if (playerScores.ContainsKey(clientId))
+        {
+            playerScores[clientId] += points;
+        }
+        else
+        {
+            playerScores.Add(clientId, points);
+        }
+        Debug.Log($"Oyuncu {clientId} için puan güncellendi. Yeni Skor: {playerScores[clientId]}");
+    }
+
+    // Skorları çekmek için yardımcı fonksiyon
+    public int GetPlayerScore(ulong clientId)
+    {
+        if (playerScores.TryGetValue(clientId, out int score)) return score;
+        return 0;
+    }
     // Sıradaki mini oyuna geçişi tetikleyecek fonksiyon (Mini oyun bitince çağrılacak)
     public void LoadNextMinigame()
     {

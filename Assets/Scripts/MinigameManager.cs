@@ -3,19 +3,29 @@ using UnityEngine;
 
 public class MinigameManager : NetworkBehaviour
 {
-    // Her oyuncunun ulong türündeki ID'sine karşılık gelen skor tablosu (Ağda senkronize)
-    // Gerçek bir oyunda bunu ağ değişkenine bağlayacağız ama şimdilik döngüyü kuralım
-    
     private void OnGUI()
     {
-        // Sadece testi canlı görebilmemiz için ekranın sol üstüne geçici butonlar çiziyoruz
-        if (!IsServer) return; // Sadece odayı kuran admin (Host) sonraki oyuna geçirebilir
+        // Ekran tasarımları bitene kadar test butonlarımızı OnGUI ile çizdiriyoruz
+        if (!IsServer) return; 
 
-        GUILayout.BeginArea(new Rect(20, 100, 250, 200));
-        
-        if (GUILayout.Button("Mini Oyunu Bitir (Sıradaki Map)", GUILayout.Height(40)))
+        GUILayout.BeginArea(new Rect(20, 100, 300, 250));
+        GUILayout.Label("=== ADMİN MİNİ OYUN PANELİ ===");
+
+        // TEST PUANLAMA BUTONU
+        if (GUILayout.Button("Rastgele Puan Dağıt (Skor Ekle)", GUILayout.Height(35)))
         {
-            // RelayManager'a "Sıradaki oyunu yükle" emrini veriyoruz
+            foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+            {
+                int randomPoints = Random.Range(5, 15);
+                RelayManager.Instance.AddScore(client.ClientId, randomPoints);
+            }
+        }
+
+        GUILayout.Space(10);
+
+        // SIRADAKİ HARİTAYA GEÇİŞ BUTONU
+        if (GUILayout.Button("Mini Oyunu Bitir ve Geç", GUILayout.Height(45)))
+        {
             if (RelayManager.Instance != null)
             {
                 RelayManager.Instance.LoadNextMinigame();
