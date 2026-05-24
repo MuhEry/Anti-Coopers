@@ -9,13 +9,13 @@ public class LobbyPlayer : NetworkBehaviour
 
     public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isReady = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    public NetworkVariable<Color> playerColor = new NetworkVariable<Color>(Color.white, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-
+    public NetworkVariable<Color32> playerColor = new NetworkVariable<Color32>(
+        new Color32(255, 255, 255, 255), NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public override void OnNetworkSpawn()
     {
         playerName.OnValueChanged += OnPlayerNameChanged;
         isReady.OnValueChanged += OnPlayerReadyChanged;
-        playerColor.OnValueChanged += OnPlayerColorChanged;
+        playerColor.OnValueChanged += (oldV, newV) => ApplyColor(newV);
 
         transform.position = new Vector3(OwnerClientId * 2.0f, 1.0f, 0f);
 
@@ -35,7 +35,7 @@ public class LobbyPlayer : NetworkBehaviour
 
     // YENİ: Oyuncunun lobide butonla kendi rengini seçmesini sağlayan fonksiyon
     [ServerRpc]
-    public void SelectColorServerRpc(Color newColor)
+    public void SelectColorServerRpc(Color32 newColor)
     {
         playerColor.Value = newColor;
     }
@@ -58,7 +58,7 @@ public class LobbyPlayer : NetworkBehaviour
     {
         playerName.OnValueChanged -= OnPlayerNameChanged;
         isReady.OnValueChanged -= OnPlayerReadyChanged;
-        playerColor.OnValueChanged -= OnPlayerColorChanged;
+        playerColor.OnValueChanged += (oldV, newV) => ApplyColor(newV);
         UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnSceneChanged;
 
         if (RelayManager.Instance != null) RelayManager.Instance.UpdatePlayerListUI();
@@ -67,8 +67,10 @@ public class LobbyPlayer : NetworkBehaviour
     private void OnPlayerNameChanged(FixedString32Bytes oldVal, FixedString32Bytes newVal) => RelayManager.Instance.UpdatePlayerListUI();
     private void OnPlayerReadyChanged(bool oldVal, bool newVal) => RelayManager.Instance.UpdatePlayerListUI();
     private void OnPlayerColorChanged(Color oldVal, Color newVal) => ApplyColor(newVal);
-    private void ApplyColor(Color targetColor) { if (bodyRenderer != null) bodyRenderer.material.color = targetColor; }
-
+    private void ApplyColor(Color32 targetColor) 
+    { 
+        if (bodyRenderer != null) bodyRenderer.material.color = targetColor; 
+    }
     [ServerRpc]
     private void SetPlayerDataServerRpc(string name, Color color)
     {

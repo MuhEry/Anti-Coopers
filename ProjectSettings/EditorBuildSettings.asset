@@ -20,6 +20,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/MiniGame_3.unity
     guid: e156c78fee315e54287c4e72bcefc8f2
+  - enabled: 1
+    path: Assets/Scenes/ScoreboardScene.unity
+    guid: 8c00825690fb74642a7e8c08139de31e
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

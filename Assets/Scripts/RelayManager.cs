@@ -34,6 +34,7 @@ public class RelayManager : MonoBehaviour
     
     // YENİ: Seçilen mini oyunların isim sıralamasını tutan liste (Playlist)
     private List<string> gamePlaylist = new List<string>();
+    private bool showingScoreboard = false;
     private int currentMapIndex = 0;
 
     private void Awake()
@@ -144,14 +145,14 @@ public class RelayManager : MonoBehaviour
     }
 
     // YENİ: PlayerController'ın lobi rengini çekebilmesi için yardımcı fonksiyon
-    public bool GetMySavedColor(ulong clientId, out Color color)
+    public bool GetMySavedColor(ulong clientId, out Color32 color)
     {
         if (savedPlayerData.TryGetValue(clientId, out var data))
         {
-            color = data.color;
+            color = data.color; // Otomatik implicit cast olur
             return true;
         }
-        color = Color.white;
+        color = new Color32(255, 255, 255, 255);
         return false;
     }
 
@@ -161,7 +162,9 @@ public class RelayManager : MonoBehaviour
         {
             if (ColorUtility.TryParseHtmlString(colorHex, out Color chosenColor))
             {
-                NetworkManager.Singleton.LocalClient.PlayerObject.GetComponent<LobbyPlayer>().SelectColorServerRpc(chosenColor);
+                // Color'ı doğrudan Color32'ye çevirerek tam sayı doğruluğu sağlıyoruz
+                Color32 strictColor = chosenColor; 
+                NetworkManager.Singleton.LocalClient.PlayerObject.GetComponent<LobbyPlayer>().SelectColorServerRpc(strictColor);
             }
         }
     }
@@ -227,22 +230,32 @@ public class RelayManager : MonoBehaviour
     }
     // Sıradaki mini oyuna geçişi tetikleyecek fonksiyon (Mini oyun bitince çağrılacak)
     public void LoadNextMinigame()
-    {
-        if (!NetworkManager.Singleton.IsHost) return;
+{
+    if (!NetworkManager.Singleton.IsHost) return;
 
+    // Eğer şu an mini oyundan çıktıysak, önce skor ekranına uğra
+    if (!showingScoreboard)
+    {
+        showingScoreboard = true;
+        NetworkManager.Singleton.SceneManager.LoadScene("ScoreboardScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
+    }
+    else
+    {
+        // Skor ekranından geliyorsak index'i arttır ve sıradaki asıl haritayı yükle
+        showingScoreboard = false;
         currentMapIndex++;
+
         if (currentMapIndex < gamePlaylist.Count)
         {
-            // Sıradaki haritayı yükle
             NetworkManager.Singleton.SceneManager.LoadScene(gamePlaylist[currentMapIndex], UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
         else
         {
-            // Tüm oyunlar bitti! Kazananlar ekranına ışınla
-            Debug.Log("Tüm mini oyunlar tamamlandı! Skor ekranına gidiliyor...");
-            // NetworkManager.Singleton.SceneManager.LoadScene("EndGameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
+            Debug.Log("TÜM PLAYLIST BİTTİ! Büyük şampiyon ilan ediliyor...");
+            // Buraya oyun tamamen bittiğinde açılacak şampiyonluk sahnesini koyabiliriz
         }
     }
+}
 
     private void OnSceneLoadCompleted(string sceneName, UnityEngine.SceneManagement.LoadSceneMode loadMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
     {

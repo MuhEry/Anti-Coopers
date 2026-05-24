@@ -34,7 +34,7 @@ public class PlayerController : NetworkBehaviour
             // HATAYI DÜZELTTİK: Rastgele renk üretmeyi sildik. 
             // Eğer RelayManager hafızasında rengimiz varsa onu alıyoruz, yoksa beyaz doğuyoruz.
             Color myLobbyColor = Color.white;
-            if (RelayManager.Instance != null && RelayManager.Instance.GetMySavedColor(OwnerClientId, out Color savedColor))
+            if (RelayManager.Instance != null && RelayManager.Instance.GetMySavedColor(OwnerClientId, out Color32 savedColor))
             {
                 myLobbyColor = savedColor;
             }
