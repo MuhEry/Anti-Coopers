@@ -12,32 +12,48 @@ public class ScoreboardManager : NetworkBehaviour
     {
         if (IsServer)
         {
-            // Sunucu, ağa bağlanan tüm istemcilere skor tablosunu hazırlayıp RPC ile yollar
-            BuildAndSendScoreboardClientRpc();
+            // Bağlı oyuncu sayısına göre dizilerimizi hazırlıyoruz
+            int clientCount = NetworkManager.Singleton.ConnectedClientsList.Count;
+            ulong[] clientIds = new ulong[clientCount];
+            int[] scores = new int[clientCount];
+
+            int index = 0;
+            foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+            {
+                clientIds[index] = client.ClientId;
+                // Skorları doğrudan sunucudaki RelayManager hafızasından çekiyoruz
+                scores[index] = RelayManager.Instance != null ? RelayManager.Instance.GetPlayerScore(client.ClientId) : 0;
+                index++;
+            }
+
+            // Hazırlanan net veriyi ağdaki tüm istemcilere parametre olarak gönderiyoruz
+            BuildAndSendScoreboardClientRpc(clientIds, scores);
             StartCoroutine(WaitAndLoadNextGame());
         }
     }
 
     [ClientRpc]
-    private void BuildAndSendScoreboardClientRpc()
+    private void BuildAndSendScoreboardClientRpc(ulong[] clientIds, int[] scores)
     {
         if (scoreboardText == null) return;
 
         scoreboardText.text = "=== MAÇ SONU SKORLARI ===\n\n";
 
-        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+        // Sunucunun gönderdiği senkronize diziler üzerinden döngü kuruyoruz
+        for (int i = 0; i < clientIds.Length; i++)
         {
+            ulong clientId = clientIds[i];
+            int currentScore = scores[i];
+
             if (RelayManager.Instance != null)
             {
-                int currentScore = RelayManager.Instance.GetPlayerScore(client.ClientId);
+                // Oyuncunun lobi verilerinden Nickname ve Renk bilgisini alıyoruz
+                RelayManager.Instance.GetMySavedData(clientId, out string playerNick, out Color32 pColor);
                 
-                // Oyuncunun lobi verilerinden gerçek Nickname ve Renk bilgisini alıyoruz
-                RelayManager.Instance.GetMySavedData(client.ClientId, out string playerNick, out Color32 pColor);
-                
-                // Rengi Hex koduna çeviriyoruz (Örn: #FF0000)
+                // Rengi Hex koduna çeviriyoruz
                 string hexColor = ColorUtility.ToHtmlStringRGB(pColor);
 
-                // YENİ: İsmi kendi renginde, skoru düz yazacak şekilde Rich Text hazırlıyoruz
+                // İsmi kendi renginde, skoru düz yazacak şekilde metne ekliyoruz
                 scoreboardText.text += $"<color=#{hexColor}>{playerNick}</color> -> Toplam Skor: {currentScore} Puan\n";
             }
         }
