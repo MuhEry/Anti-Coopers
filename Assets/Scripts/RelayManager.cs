@@ -20,22 +20,26 @@ public class RelayManager : MonoBehaviour
 
     [Header("UI Metin Elemanları")]
     [SerializeField] private TMP_InputField codeInputField; 
+    [SerializeField] private TMP_InputField nicknameInputField; // YENİ: Nickname Giriş Alanı
     [SerializeField] private TMP_Text lobbyCodeText;
     [SerializeField] private TMP_Text playerListText;
     [SerializeField] private UnityEngine.UI.Button startGameButton;
     [SerializeField] private TMP_Dropdown mapDropdown; 
-    [SerializeField] private TMP_Text playlistText; // YENİ: Seçilen haritaların sırasını gösterecek metin
+    [SerializeField] private TMP_Text playlistText; 
 
     [Header("Oyun İçi Doğum Ayarları")]
     [SerializeField] private GameObject gamePlayerPrefab; 
 
     [HideInInspector] public string LocalProfileName;
-    private Dictionary<ulong, (string name, Color color)> savedPlayerData = new Dictionary<ulong, (string, Color)>();
     
-    // YENİ: Seçilen mini oyunların isim sıralamasını tutan liste (Playlist)
+    // YENİ: Skor ekranının Client'larda da doğru çalışması için verileri içerecek yapı
+    private Dictionary<ulong, (string name, Color32 color)> savedPlayerData = new Dictionary<ulong, (string, Color32)>();
     private List<string> gamePlaylist = new List<string>();
     private bool showingScoreboard = false;
     private int currentMapIndex = 0;
+
+    // Skor Tablosu
+    private Dictionary<ulong, int> playerScores = new Dictionary<ulong, int>();
 
     private void Awake()
     {
@@ -64,8 +68,19 @@ public class RelayManager : MonoBehaviour
         catch (System.Exception e) { Debug.LogError("Servis hatası: " + e.Message); }
     }
 
+    // YENİ: Butonlara tıklanınca input field'daki ismi profile atayan fonksiyon
+    private void SetNicknameBeforeConnect()
+    {
+        if (nicknameInputField != null && !string.IsNullOrEmpty(nicknameInputField.text))
+        {
+            LocalProfileName = nicknameInputField.text;
+        }
+    }
+
     public async void CreateRelay()
     {
+        SetNicknameBeforeConnect();
+
         if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsClient || NetworkManager.Singleton.IsServer)
         { NetworkManager.Singleton.Shutdown(); await Task.Delay(500); }
 
@@ -93,6 +108,8 @@ public class RelayManager : MonoBehaviour
 
     public async void JoinRelay() 
     {
+        SetNicknameBeforeConnect();
+
         if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsClient || NetworkManager.Singleton.IsServer)
         { NetworkManager.Singleton.Shutdown(); await Task.Delay(500); }
 
@@ -139,20 +156,32 @@ public class RelayManager : MonoBehaviour
 
         if (NetworkManager.Singleton.IsHost)
         {
-            // OYUNU BAŞLATMA ŞARTI: Herkes hazır olmalı VE admin en az 1 harita seçmiş olmalı
             startGameButton.interactable = allReady && players.Length >= 1 && gamePlaylist.Count > 0; 
         }
     }
 
-    // YENİ: PlayerController'ın lobi rengini çekebilmesi için yardımcı fonksiyon
     public bool GetMySavedColor(ulong clientId, out Color32 color)
     {
         if (savedPlayerData.TryGetValue(clientId, out var data))
         {
-            color = data.color; // Otomatik implicit cast olur
+            color = data.color;
             return true;
         }
         color = new Color32(255, 255, 255, 255);
+        return false;
+    }
+
+    // YENİ: Skor ekranının her iki pencerede oyuncu verilerini çekebilmesi için ek veri metodu
+    public bool GetMySavedData(ulong clientId, out string name, out Color32 color)
+    {
+        if (savedPlayerData.TryGetValue(clientId, out var data))
+        {
+            name = data.name;
+            color = data.color;
+            return true;
+        }
+        name = "Player_" + clientId;
+        color = Color.white;
         return false;
     }
 
@@ -162,23 +191,20 @@ public class RelayManager : MonoBehaviour
         {
             if (ColorUtility.TryParseHtmlString(colorHex, out Color chosenColor))
             {
-                // Color'ı doğrudan Color32'ye çevirerek tam sayı doğruluğu sağlıyoruz
                 Color32 strictColor = chosenColor; 
                 NetworkManager.Singleton.LocalClient.PlayerObject.GetComponent<LobbyPlayer>().SelectColorServerRpc(strictColor);
             }
         }
     }
 
-    // YENİ: Admin "Harita Ekle" butonuna basınca çalışacak fonksiyon
     public void AddMapToPlaylist()
     {
         string selectedMap = mapDropdown.options[mapDropdown.value].text;
         gamePlaylist.Add(selectedMap);
         UpdatePlaylistUI();
-        UpdatePlayerListUI(); // Oyun başlat butonunu tetiklemek için
+        UpdatePlayerListUI(); 
     }
 
-    // YENİ: Playlist listesini ekrana yazdıran fonksiyon
     private void UpdatePlaylistUI()
     {
         if (playlistText == null) return;
@@ -203,59 +229,46 @@ public class RelayManager : MonoBehaviour
             NetworkManager.Singleton.SceneManager.LoadScene(gamePlaylist[currentMapIndex], UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }
-    // Her oyuncunun ulong türündeki ID'sine karşılık gelen toplam skor tablosu
-    private Dictionary<ulong, int> playerScores = new Dictionary<ulong, int>();
 
-    // Oyun içi yöneticilerin oyunculara puan ekleyebilmesi için fonksiyon
     public void AddScore(ulong clientId, int points)
     {
         if (!NetworkManager.Singleton.IsServer) return;
 
-        if (playerScores.ContainsKey(clientId))
-        {
-            playerScores[clientId] += points;
-        }
-        else
-        {
-            playerScores.Add(clientId, points);
-        }
+        if (playerScores.ContainsKey(clientId)) { playerScores[clientId] += points; }
+        else { playerScores.Add(clientId, points); }
         Debug.Log($"Oyuncu {clientId} için puan güncellendi. Yeni Skor: {playerScores[clientId]}");
     }
 
-    // Skorları çekmek için yardımcı fonksiyon
     public int GetPlayerScore(ulong clientId)
     {
         if (playerScores.TryGetValue(clientId, out int score)) return score;
         return 0;
     }
-    // Sıradaki mini oyuna geçişi tetikleyecek fonksiyon (Mini oyun bitince çağrılacak)
+
     public void LoadNextMinigame()
-{
-    if (!NetworkManager.Singleton.IsHost) return;
-
-    // Eğer şu an mini oyundan çıktıysak, önce skor ekranına uğra
-    if (!showingScoreboard)
     {
-        showingScoreboard = true;
-        NetworkManager.Singleton.SceneManager.LoadScene("ScoreboardScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
-    }
-    else
-    {
-        // Skor ekranından geliyorsak index'i arttır ve sıradaki asıl haritayı yükle
-        showingScoreboard = false;
-        currentMapIndex++;
+        if (!NetworkManager.Singleton.IsHost) return;
 
-        if (currentMapIndex < gamePlaylist.Count)
+        if (!showingScoreboard)
         {
-            NetworkManager.Singleton.SceneManager.LoadScene(gamePlaylist[currentMapIndex], UnityEngine.SceneManagement.LoadSceneMode.Single);
+            showingScoreboard = true;
+            NetworkManager.Singleton.SceneManager.LoadScene("ScoreboardScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
         else
         {
-            Debug.Log("TÜM PLAYLIST BİTTİ! Büyük şampiyon ilan ediliyor...");
-            // Buraya oyun tamamen bittiğinde açılacak şampiyonluk sahnesini koyabiliriz
+            showingScoreboard = false;
+            currentMapIndex++;
+
+            if (currentMapIndex < gamePlaylist.Count)
+            {
+                NetworkManager.Singleton.SceneManager.LoadScene(gamePlaylist[currentMapIndex], UnityEngine.SceneManagement.LoadSceneMode.Single);
+            }
+            else
+            {
+                Debug.Log("TÜM PLAYLIST BİTTİ! Büyük şampiyon ilan ediliyor...");
+            }
         }
     }
-}
 
     private void OnSceneLoadCompleted(string sceneName, UnityEngine.SceneManagement.LoadSceneMode loadMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
     {
@@ -272,7 +285,7 @@ public class RelayManager : MonoBehaviour
                 {
                     PlayerController controller = newPlayer.GetComponent<PlayerController>();
                     controller.networkPlayerName.Value = data.name;
-                    controller.networkPlayerColor.Value = data.color; // Renk hatası buradan çözüldü!
+                    controller.networkPlayerColor.Value = data.color; 
                 }
                 spawnIndex++;
             }

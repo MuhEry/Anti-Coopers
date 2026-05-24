@@ -11,6 +11,7 @@ public class LobbyPlayer : NetworkBehaviour
     public NetworkVariable<bool> isReady = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<Color32> playerColor = new NetworkVariable<Color32>(
         new Color32(255, 255, 255, 255), NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
     public override void OnNetworkSpawn()
     {
         playerName.OnValueChanged += OnPlayerNameChanged;
@@ -21,8 +22,7 @@ public class LobbyPlayer : NetworkBehaviour
 
         if (IsOwner)
         {
-            // İlk girişte varsayılan rastgele bir renk atıyoruz
-            Color randomColor = new Color(Random.value, Random.value, Random.value);
+            Color32 randomColor = new Color(Random.value, Random.value, Random.value);
             SetPlayerDataServerRpc(RelayManager.Instance.LocalProfileName, randomColor);
         }
         else
@@ -33,7 +33,6 @@ public class LobbyPlayer : NetworkBehaviour
         if (RelayManager.Instance != null) RelayManager.Instance.UpdatePlayerListUI();
     }
 
-    // YENİ: Oyuncunun lobide butonla kendi rengini seçmesini sağlayan fonksiyon
     [ServerRpc]
     public void SelectColorServerRpc(Color32 newColor)
     {
@@ -47,7 +46,6 @@ public class LobbyPlayer : NetworkBehaviour
 
     private void OnSceneChanged(UnityEngine.SceneManagement.Scene oldScene, UnityEngine.SceneManagement.Scene newScene)
     {
-        // Harita ismi "MiniGame_" ile başlıyorsa lobi kapsüllerini temizle
         if (newScene.name.StartsWith("MiniGame_") || newScene.name == "GameScene")
         {
             if (IsServer) GetComponent<NetworkObject>().Despawn(true);
@@ -58,7 +56,7 @@ public class LobbyPlayer : NetworkBehaviour
     {
         playerName.OnValueChanged -= OnPlayerNameChanged;
         isReady.OnValueChanged -= OnPlayerReadyChanged;
-        playerColor.OnValueChanged += (oldV, newV) => ApplyColor(newV);
+        playerColor.OnValueChanged -= (oldV, newV) => ApplyColor(newV); // HATAYI DÜZELTTİK: -= Yaptık
         UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnSceneChanged;
 
         if (RelayManager.Instance != null) RelayManager.Instance.UpdatePlayerListUI();
@@ -66,13 +64,13 @@ public class LobbyPlayer : NetworkBehaviour
 
     private void OnPlayerNameChanged(FixedString32Bytes oldVal, FixedString32Bytes newVal) => RelayManager.Instance.UpdatePlayerListUI();
     private void OnPlayerReadyChanged(bool oldVal, bool newVal) => RelayManager.Instance.UpdatePlayerListUI();
-    private void OnPlayerColorChanged(Color oldVal, Color newVal) => ApplyColor(newVal);
     private void ApplyColor(Color32 targetColor) 
     { 
         if (bodyRenderer != null) bodyRenderer.material.color = targetColor; 
     }
+
     [ServerRpc]
-    private void SetPlayerDataServerRpc(string name, Color color)
+    private void SetPlayerDataServerRpc(string name, Color32 color) // HATAYI DÜZELTTİK: Color32 yaptık
     {
         playerName.Value = name;
         playerColor.Value = color;

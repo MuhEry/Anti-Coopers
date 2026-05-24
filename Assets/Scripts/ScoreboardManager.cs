@@ -6,30 +6,40 @@ using System.Collections;
 public class ScoreboardManager : NetworkBehaviour
 {
     [SerializeField] private TMP_Text scoreboardText;
-    [SerializeField] private float waitTimeBeforeNextGame = 4f; // Skor ekranında kaç saniye beklenecek?
+    [SerializeField] private float waitTimeBeforeNextGame = 5f; 
 
-    private void Start()
+    public override void OnNetworkSpawn()
+    {
+        if (IsServer)
+        {
+            // Sunucu, ağa bağlanan tüm istemcilere skor tablosunu hazırlayıp RPC ile yollar
+            BuildAndSendScoreboardClientRpc();
+            StartCoroutine(WaitAndLoadNextGame());
+        }
+    }
+
+    [ClientRpc]
+    private void BuildAndSendScoreboardClientRpc()
     {
         if (scoreboardText == null) return;
 
         scoreboardText.text = "=== MAÇ SONU SKORLARI ===\n\n";
 
-        // Ağdaki tüm bağlı oyuncuları dönüp RelayManager'daki skorlarını ekrana yazıyoruz
         foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
         {
             if (RelayManager.Instance != null)
             {
                 int currentScore = RelayManager.Instance.GetPlayerScore(client.ClientId);
                 
-                // Eğer oyuncunun ismini de çekmek istersek RelayManager hafızasından eşleştirebiliriz
-                scoreboardText.text += $"Oyuncu (ID: {client.ClientId}) -> Toplam Skor: {currentScore} Puan\n";
-            }
-        }
+                // Oyuncunun lobi verilerinden gerçek Nickname ve Renk bilgisini alıyoruz
+                RelayManager.Instance.GetMySavedData(client.ClientId, out string playerNick, out Color32 pColor);
+                
+                // Rengi Hex koduna çeviriyoruz (Örn: #FF0000)
+                string hexColor = ColorUtility.ToHtmlStringRGB(pColor);
 
-        // Sadece Host olan taraf zamanlayıcıyı başlatsın ve sıradaki oyuna geçirsin
-        if (IsServer)
-        {
-            StartCoroutine(WaitAndLoadNextGame());
+                // YENİ: İsmi kendi renginde, skoru düz yazacak şekilde Rich Text hazırlıyoruz
+                scoreboardText.text += $"<color=#{hexColor}>{playerNick}</color> -> Toplam Skor: {currentScore} Puan\n";
+            }
         }
     }
 
