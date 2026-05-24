@@ -20,7 +20,7 @@ public class RelayManager : MonoBehaviour
 
     [Header("UI Metin Elemanları")]
     [SerializeField] private TMP_InputField codeInputField; 
-    [SerializeField] private TMP_InputField nicknameInputField; // YENİ: Nickname Giriş Alanı
+    [SerializeField] private TMP_InputField nicknameInputField; 
     [SerializeField] private TMP_Text lobbyCodeText;
     [SerializeField] private TMP_Text playerListText;
     [SerializeField] private UnityEngine.UI.Button startGameButton;
@@ -31,14 +31,11 @@ public class RelayManager : MonoBehaviour
     [SerializeField] private GameObject gamePlayerPrefab; 
 
     [HideInInspector] public string LocalProfileName;
-    
-    // YENİ: Skor ekranının Client'larda da doğru çalışması için verileri içerecek yapı
     private Dictionary<ulong, (string name, Color32 color)> savedPlayerData = new Dictionary<ulong, (string, Color32)>();
     private List<string> gamePlaylist = new List<string>();
     private bool showingScoreboard = false;
     private int currentMapIndex = 0;
 
-    // Skor Tablosu
     private Dictionary<ulong, int> playerScores = new Dictionary<ulong, int>();
 
     private void Awake()
@@ -52,6 +49,7 @@ public class RelayManager : MonoBehaviour
         mainMenuPanel.SetActive(true);
         lobbyPanel.SetActive(false);
         hostMapSelectionPanel.SetActive(false);
+        if (startGameButton != null) startGameButton.gameObject.SetActive(false); // Başta kapalı tut
 
         try
         {
@@ -68,7 +66,6 @@ public class RelayManager : MonoBehaviour
         catch (System.Exception e) { Debug.LogError("Servis hatası: " + e.Message); }
     }
 
-    // YENİ: Butonlara tıklanınca input field'daki ismi profile atayan fonksiyon
     private void SetNicknameBeforeConnect()
     {
         if (nicknameInputField != null && !string.IsNullOrEmpty(nicknameInputField.text))
@@ -77,12 +74,23 @@ public class RelayManager : MonoBehaviour
         }
     }
 
+    private async Task SafeShutdownNetwork()
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
+        {
+            NetworkManager.Singleton.Shutdown();
+            while (NetworkManager.Singleton.IsListening)
+            {
+                await Task.Delay(50); 
+            }
+            await Task.Delay(200);
+        }
+    }
+
     public async void CreateRelay()
     {
         SetNicknameBeforeConnect();
-
-        if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsClient || NetworkManager.Singleton.IsServer)
-        { NetworkManager.Singleton.Shutdown(); await Task.Delay(500); }
+        await SafeShutdownNetwork(); 
 
         try
         {
@@ -92,7 +100,16 @@ public class RelayManager : MonoBehaviour
             
             if (transport != null)
             {
-                transport.SetRelayServerData(allocation.RelayServer.IpV4, (ushort)allocation.RelayServer.Port, allocation.AllocationIdBytes, allocation.Key, allocation.ConnectionData);
+                // DERLEME HATASI DÜZELTİLDİ: Netcode'un en kararlı Allocation eşleştirme yöntemi
+                transport.SetRelayServerData(
+                    allocation.RelayServer.IpV4,
+                    (ushort)allocation.RelayServer.Port,
+                    allocation.AllocationIdBytes,
+                    allocation.Key,
+                    allocation.ConnectionData
+                    //allocation.ConnectionData  // Host için hostConnectionData = kendi ConnectionData'sı
+                );
+                
                 NetworkManager.Singleton.StartHost();
                 NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadCompleted;
 
@@ -100,6 +117,12 @@ public class RelayManager : MonoBehaviour
                 mainMenuPanel.SetActive(false);
                 lobbyPanel.SetActive(true);
                 hostMapSelectionPanel.SetActive(true);
+                
+                if (startGameButton != null)
+                {
+                    startGameButton.gameObject.SetActive(true);
+                    startGameButton.interactable = false;
+                }
                 UpdatePlaylistUI();
             }
         }
@@ -109,9 +132,7 @@ public class RelayManager : MonoBehaviour
     public async void JoinRelay() 
     {
         SetNicknameBeforeConnect();
-
-        if (NetworkManager.Singleton.IsListening || NetworkManager.Singleton.IsClient || NetworkManager.Singleton.IsServer)
-        { NetworkManager.Singleton.Shutdown(); await Task.Delay(500); }
+        await SafeShutdownNetwork(); 
 
         try
         {
@@ -121,13 +142,24 @@ public class RelayManager : MonoBehaviour
             
             if (transport != null)
             {
-                transport.SetRelayServerData(joinAllocation.RelayServer.IpV4, (ushort)joinAllocation.RelayServer.Port, joinAllocation.AllocationIdBytes, joinAllocation.Key, joinAllocation.ConnectionData, joinAllocation.HostConnectionData);
+                // DERLEME HATASI DÜZELTİLDİ: Netcode'un en kararlı JoinAllocation eşleştirme yöntemi
+                transport.SetRelayServerData(
+                    joinAllocation.RelayServer.IpV4,
+                    (ushort)joinAllocation.RelayServer.Port,
+                    joinAllocation.AllocationIdBytes,
+                    joinAllocation.Key,
+                    joinAllocation.ConnectionData,
+                    joinAllocation.HostConnectionData
+                );
+                
                 NetworkManager.Singleton.StartClient();
 
                 lobbyCodeText.text = "ODA KODU: " + joinCode;
                 mainMenuPanel.SetActive(false);
                 lobbyPanel.SetActive(true);
                 hostMapSelectionPanel.SetActive(false);
+
+                if (startGameButton != null) startGameButton.gameObject.SetActive(false);
             }
         }
         catch (RelayServiceException e) { Debug.LogError("Relay hatası: " + e.Message); }
@@ -154,7 +186,8 @@ public class RelayManager : MonoBehaviour
             }
         }
 
-        if (NetworkManager.Singleton.IsHost)
+        // Buton görünürse durumunu denetle (Sadece Host'ta çalışır)
+        if (NetworkManager.Singleton.IsHost && startGameButton != null && startGameButton.gameObject.activeSelf)
         {
             startGameButton.interactable = allReady && players.Length >= 1 && gamePlaylist.Count > 0; 
         }
@@ -171,7 +204,6 @@ public class RelayManager : MonoBehaviour
         return false;
     }
 
-    // YENİ: Skor ekranının her iki pencerede oyuncu verilerini çekebilmesi için ek veri metodu
     public bool GetMySavedData(ulong clientId, out string name, out Color32 color)
     {
         if (savedPlayerData.TryGetValue(clientId, out var data))
@@ -199,10 +231,21 @@ public class RelayManager : MonoBehaviour
 
     public void AddMapToPlaylist()
     {
+        if (mapDropdown == null || mapDropdown.options.Count == 0) return;
+        
         string selectedMap = mapDropdown.options[mapDropdown.value].text;
         gamePlaylist.Add(selectedMap);
         UpdatePlaylistUI();
         UpdatePlayerListUI(); 
+    }
+
+    // YENİ İSTEK: Oynatma listesini tamamen sıfırlayan admin fonksiyonu
+    public void ClearPlaylist()
+    {
+        gamePlaylist.Clear();
+        UpdatePlaylistUI();
+        UpdatePlayerListUI();
+        Debug.Log("Harita oynatma listesi temizlendi.");
     }
 
     private void UpdatePlaylistUI()
@@ -225,6 +268,7 @@ public class RelayManager : MonoBehaviour
     {
         if (NetworkManager.Singleton.IsHost && gamePlaylist.Count > 0)
         {
+            showingScoreboard = false; 
             currentMapIndex = 0;
             NetworkManager.Singleton.SceneManager.LoadScene(gamePlaylist[currentMapIndex], UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
@@ -236,7 +280,6 @@ public class RelayManager : MonoBehaviour
 
         if (playerScores.ContainsKey(clientId)) { playerScores[clientId] += points; }
         else { playerScores.Add(clientId, points); }
-        Debug.Log($"Oyuncu {clientId} için puan güncellendi. Yeni Skor: {playerScores[clientId]}");
     }
 
     public int GetPlayerScore(ulong clientId)
@@ -265,7 +308,7 @@ public class RelayManager : MonoBehaviour
             }
             else
             {
-                Debug.Log("TÜM PLAYLIST BİTTİ! Büyük şampiyon ilan ediliyor...");
+                Debug.Log("TÜM PLAYLIST BİTTİ!");
             }
         }
     }
@@ -296,6 +339,7 @@ public class RelayManager : MonoBehaviour
     {
         if (NetworkManager.Singleton != null) NetworkManager.Singleton.Shutdown();
         gamePlaylist.Clear();
+        playerScores.Clear(); 
         lobbyPanel.SetActive(false);
         mainMenuPanel.SetActive(true);
     }
