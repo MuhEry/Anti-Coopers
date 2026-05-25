@@ -1,0 +1,15 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: DwarfF_Demo
+  m_Controller: {fileID: 9100000, guid: 0cdf148ddae7069458055b413ac388cd, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 6475889883530503105, guid: 9427cf53941f2354f93480a693ac4123, type: 3}
+    m_OverrideClip: {fileID: -5952325219242399703, guid: 6890cc285ce4eeb4e86df98a135533f6, type: 3}
+  - m_OriginalClip: {fileID: 8547178355682987015, guid: c088792270c9e3f409e5ed3a0c8e61f7, type: 3}
+    m_OverrideClip: {fileID: -8886929986580214599, guid: 50b9328c8ef47634c830d9c5f70bfb35, type: 3}

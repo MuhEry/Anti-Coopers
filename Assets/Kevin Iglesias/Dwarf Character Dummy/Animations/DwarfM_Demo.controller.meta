@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0cdf148ddae7069458055b413ac388cd
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 381574
+  packageName: Dwarf Character Dummy
+  packageVersion: 1.0
+  assetPath: Assets/Kevin Iglesias/Dwarf Character Dummy/Animations/DwarfM_Demo.controller
+  uploadId: 920520

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: be9e233fe3200ec41b4cbef51ea67300
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 381574
+  packageName: Dwarf Character Dummy
+  packageVersion: 1.0
+  assetPath: Assets/Kevin Iglesias/Dwarf Character Dummy/Materials/DwarfDummy.shader
+  uploadId: 920520
