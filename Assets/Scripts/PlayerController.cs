@@ -1,12 +1,13 @@
 using Unity.Netcode;
 using Unity.Collections;
 using UnityEngine;
+using TMPro; // YENİ: TextMeshPro bileşenini kullanabilmek için ekledik
 
 public class PlayerController : NetworkBehaviour
 {
     [Header("Hareket Ayarları")]
     [SerializeField] private float moveSpeed = 7f;
-    [SerializeField] private float jumpForce = 6f; // YENİ: Zıplama gücü
+    [SerializeField] private float jumpForce = 6f; 
     [SerializeField] private Animator animator;
 
     [Header("Vurma Ayarları")]
@@ -14,12 +15,15 @@ public class PlayerController : NetworkBehaviour
     [SerializeField] private float punchRadius = 1.2f;
     [SerializeField] private LayerMask playerLayer;
     [SerializeField] private float knockbackForce = 8f;
-    [SerializeField] private float punchCooldown = 1.5f; // YENİ: Yumruk atma aralığı (1.5 saniye)
+    [SerializeField] private float punchCooldown = 1.5f; 
 
     [Header("Zemin Kontrolü")]
-    [SerializeField] private Transform groundCheckPoint; // YENİ: Karakterin ayak ucuna koyulacak nokta
+    [SerializeField] private Transform groundCheckPoint; 
     [SerializeField] private float groundCheckRadius = 0.3f;
-    [SerializeField] private LayerMask groundLayer; // Zemin katmanı
+    [SerializeField] private LayerMask groundLayer; 
+
+    [Header("UI Ayarları")]
+    [SerializeField] private TMP_Text nameTagText; // YENİ: Başın üzerindeki metin kutusu slotu
 
     // Network Değişkenleri
     public NetworkVariable<FixedString32Bytes> networkPlayerName = new NetworkVariable<FixedString32Bytes>("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
@@ -29,25 +33,22 @@ public class PlayerController : NetworkBehaviour
     private bool isStunned = false;
     private float stunTimer = 0f;
     
-    private float nextPunchTime = 0f; // YENİ: Bir sonraki yumruk atılabilecek zamanı tutar
-    private bool isGrounded = true;   // YENİ: Zeminde miyiz?
+    private float nextPunchTime = 0f; 
+    private bool isGrounded = true;   
 
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
         if (animator == null) animator = GetComponentInChildren<Animator>();
         
-        // Rigidbody'nin takla atmasını engelliyoruz (Sadece kodla dönecek)
         if (rb != null)
         {
             rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
 
-        // Modelin alt nesnesinin lokal rotasyonunu oyun başlarken donduruyoruz
         if (animator != null)
         {
             animator.transform.localRotation = Quaternion.Euler(0, 0, 0); 
-            // Buradaki -23f değerini karakterin oyunda tam düz bakacağı açıya göre ince ayar yapabilirsin.
         }
     }
 
@@ -62,7 +63,6 @@ public class PlayerController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        // Sersemleme Kontrolü
         if (isStunned)
         {
             stunTimer -= Time.deltaTime;
@@ -74,7 +74,6 @@ public class PlayerController : NetworkBehaviour
             return; 
         }
 
-        // YENİ: Zemin Kontrolü (Ayaklarımız yere basıyor mu?)
         if (groundCheckPoint != null)
         {
             isGrounded = Physics.CheckSphere(groundCheckPoint.position, groundCheckRadius, groundLayer);
@@ -84,17 +83,13 @@ public class PlayerController : NetworkBehaviour
         {
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             
-            // Zıplama Girişi
             if (keyboard.spaceKey.wasPressedThisFrame && isGrounded)
             {
-                // Fiziksel Zıplama
                 rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
-                
-                // YENİ: Animasyonu Ağda Tetikle
                 SetJumpTriggerServerRpc();
             }
         }
-        // Input System Hareket Girdileri
+
         float moveX = 0f;
         float moveZ = 0f;
 
@@ -106,23 +101,14 @@ public class PlayerController : NetworkBehaviour
             if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) moveZ = -1f;
             if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) moveX = -1f;
             if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) moveX = 1f;
-
-            // YENİ: Zıplama Aksiyonu (Space'e basıldıysa ve yerdeysek)
-            if (keyboard.spaceKey.wasPressedThisFrame && isGrounded)
-            {
-                rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
-                // NOT: Eğer asset içinde zıplama animasyonun varsa buraya tetikleyici ekleyebiliriz
-            }
         }
 
         Vector3 moveDir = new Vector3(moveX, 0f, moveZ).normalized;
 
         if (moveDir.magnitude > 0.1f)
         {
-            // DÜZELTİLDİ: Karakter sadece hız vektörüne göre değil, bastığın yöne (moveDir) anlık bakar
             rb.linearVelocity = new Vector3(moveDir.x * moveSpeed, rb.linearVelocity.y, moveDir.z * moveSpeed);
             
-            // Gövdeyi pürüzsüzce koşulan yöne doğru çeviriyoruz
             Quaternion targetRotation = Quaternion.LookRotation(moveDir);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 15f);
             
@@ -134,19 +120,24 @@ public class PlayerController : NetworkBehaviour
             SetRunningStateServerRpc(false);
         }
 
-        // DÜZELTİLDİ: Yumruk Atma Şartı + Cooldown Süresi Kontrolü
         if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame)
         {
             if (Time.time >= nextPunchTime)
             {
                 PunchActionServerRpc();
-                nextPunchTime = Time.time + punchCooldown; // Süreyi ileri atıyoruz
+                nextPunchTime = Time.time + punchCooldown; 
             }
         }
     }
 
     private void UpdatePlayerVisuals()
     {
+        // YENİ: Lobiden gelen ağ ismini TextMeshPro alanına zorla yazdırıyoruz
+        if (nameTagText != null)
+        {
+            nameTagText.text = networkPlayerName.Value.ToString();
+        }
+
         Renderer[] renderers = GetComponentsInChildren<Renderer>();
         foreach (var r in renderers)
         {
@@ -156,21 +147,14 @@ public class PlayerController : NetworkBehaviour
             }
         }
     }
+
     [ServerRpc]
-    private void SetJumpTriggerServerRpc()
-    {
-        // Sunucu bu emri alır ve tüm istemcilere (Clients) iletir
-        SetJumpTriggerClientRpc();
-    }
+    private void SetJumpTriggerServerRpc() => SetJumpTriggerClientRpc();
 
     [ClientRpc]
     private void SetJumpTriggerClientRpc()
     {
-        // Herkesin ekranında bu karakterin zıplama animasyonu oynar
-        if (animator != null)
-        {
-            animator.SetTrigger("Jump");
-        }
+        if (animator != null) animator.SetTrigger("Jump");
     }
 
     [ServerRpc]
@@ -195,7 +179,7 @@ public class PlayerController : NetworkBehaviour
             if (targetPlayer != null)
             {
                 Vector3 knockbackDir = (hit.transform.position - transform.position).normalized;
-                knockbackDir.y = 0.3f; // Sektirmeyi belirginleştirdik
+                knockbackDir.y = 0.3f; 
                 targetPlayer.TakeHitServerRpc(knockbackDir * knockbackForce);
             }
         }
@@ -239,7 +223,6 @@ public class PlayerController : NetworkBehaviour
             Gizmos.DrawWireSphere(punchPoint.position, punchRadius);
         }
 
-        // YENİ: Editörde zemin kontrol küresini çizdiriyoruz
         if (groundCheckPoint != null)
         {
             Gizmos.color = Color.green;

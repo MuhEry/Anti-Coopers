@@ -464,7 +464,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   ShowTopMostFoldoutHeaderGroup: 1
   moveSpeed: 4
-  jumpForce: 4
+  jumpForce: 4.5
   animator: {fileID: 1909078878207846055}
   punchPoint: {fileID: 4280125473408626209}
   punchRadius: 1
@@ -478,6 +478,7 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 128
+  nameTagText: {fileID: 2915335152781071638}
   networkPlayerName:
     UpdateTraits:
       MinSecondsBetweenUpdates: 0
