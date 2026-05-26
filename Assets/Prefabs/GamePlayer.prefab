@@ -277,7 +277,7 @@ Transform:
   m_GameObject: {fileID: 5461951470871767882}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.007, z: 0.437}
+  m_LocalPosition: {x: 0, y: 1, z: 0.5}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -467,12 +467,12 @@ MonoBehaviour:
   jumpForce: 4
   animator: {fileID: 1909078878207846055}
   punchPoint: {fileID: 4280125473408626209}
-  punchRadius: 1.2
+  punchRadius: 1
   playerLayer:
     serializedVersion: 2
     m_Bits: 64
-  knockbackForce: 8
-  punchCooldown: 1.5
+  knockbackForce: 5
+  punchCooldown: 1.7
   groundCheckPoint: {fileID: 1371746242755234560}
   groundCheckRadius: 0.3
   groundLayer:
