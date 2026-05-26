@@ -4,14 +4,13 @@ using UnityEngine;
 
 public class LobbyPlayer : NetworkBehaviour
 {
-    [Header("Görsel Bileşenler")]
-    [SerializeField] private MeshRenderer bodyRenderer; 
+    // BAĞLANTI DÜZELTİLDİ: Karakter modelleri için SkinnedMeshRenderer dizisi kullanıyoruz
+    private SkinnedMeshRenderer[] bodyRenderers; 
 
     public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isReady = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<Color32> playerColor = new NetworkVariable<Color32>(new Color32(255, 255, 255, 255), NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    // İSTEDİĞİN SÜRPRİZ OLMAYAN 8 SABİT RENK HAVUZU
     private readonly string[] allowedLobbyColors = new string[]
     {
         "#000000", // Siyah
@@ -26,6 +25,9 @@ public class LobbyPlayer : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        // ÖNEMLİ: Modelin içindeki tüm boyanabilir parçaları otomatik buluyoruz
+        bodyRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
+
         playerName.OnValueChanged += OnPlayerNameChanged;
         isReady.OnValueChanged += OnPlayerReadyChanged;
         playerColor.OnValueChanged += OnPlayerColorInternalChanged;
@@ -34,7 +36,6 @@ public class LobbyPlayer : NetworkBehaviour
 
         if (IsOwner)
         {
-            // İlk girişte elindeki 8 renkten rastgele birini seçiyoruz
             string randomHex = allowedLobbyColors[Random.Range(0, allowedLobbyColors.Length)];
             Color32 defaultColor = Color.white;
             if (ColorUtility.TryParseHtmlString(randomHex, out Color parsedColor))
@@ -87,7 +88,20 @@ public class LobbyPlayer : NetworkBehaviour
 
     private void ApplyColor(Color32 targetColor) 
     { 
-        if (bodyRenderer != null) bodyRenderer.material.color = targetColor; 
+        // Eğer başlangıçta dizi boşsa tekrar kontrol et garantiye al
+        if (bodyRenderers == null || bodyRenderers.Length == 0)
+        {
+            bodyRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
+        }
+
+        // Modelin pelerini, gövdesi, sakalı ne varsa Lit materyalini lobi rengine boyar
+        foreach (var renderer in bodyRenderers)
+        {
+            if (renderer != null)
+            {
+                renderer.material.color = targetColor;
+            }
+        }
     }
 
     [ServerRpc]
