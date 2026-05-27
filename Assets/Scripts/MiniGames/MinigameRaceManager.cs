@@ -10,7 +10,8 @@ public class MinigameRaceManager : NetworkBehaviour
     [Header("Yarış Ayarları")]
     [SerializeField] private float gameDuration = 45f; // Başlangıç süresi
     [SerializeField] private TMP_Text timerText;
-
+    [Header("UI Bildirim Ayarları")]
+    [SerializeField] private TMP_Text finishedStatusText; // Sahnedeki "Bitirdin!" yazısı slotu
     private NetworkVariable<float> timeRemaining = new NetworkVariable<float>(45f);
     private bool gameEnded = false;
 
@@ -56,20 +57,34 @@ public class MinigameRaceManager : NetworkBehaviour
     {
         if (!IsServer || gameEnded) return;
 
-        // Bitişe ulaşan oyuncunun skorunu ekle (Kalan saniye kadar puan)
         int scoreReward = Mathf.CeilToInt(timeRemaining.Value);
         if (scoreReward < 0) scoreReward = 0;
 
         RelayManager.Instance.AddScore(clientId, scoreReward);
-        Debug.Log($"Oyuncu {clientId} bitirdi! Kazanılan Puan: {scoreReward}");
+        Debug.Log($"Oyuncu {clientId} bitirdi! Puan: {scoreReward}");
 
-        // Her bitiren oyuncuda süreyi 5 saniye azalt (Minimum 2 saniyeye kadar düşebilir)
+        // YENİ: Bitiş çizgisini geçen oyuncunun kendi ekranına bildirim yolluyoruz
+        NotifyFinishedClientRpc(clientId);
+
         if (timeRemaining.Value > 5f)
         {
             timeRemaining.Value -= 5f;
         }
     }
-
+    
+    [ClientRpc]
+    private void NotifyFinishedClientRpc(ulong finishedClientId)
+    {
+        // Eğer bu bilgisayarın yerel oyuncusu bitiş çizgisini geçen oyuncuysa ekrana yazıyı bas
+        if (NetworkManager.Singleton.LocalClientId == finishedClientId)
+        {
+            if (finishedStatusText != null)
+            {
+                finishedStatusText.text = "<color=green>BİTİŞ ÇİZGİSİNE ULAŞILDI!</color>\nDiğer oyuncular bekleniyor...";
+                finishedStatusText.gameObject.SetActive(true);
+            }
+        }
+    }
     public void EndMinigame()
     {
         if (!IsServer || gameEnded) return;

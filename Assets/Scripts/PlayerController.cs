@@ -57,6 +57,7 @@ public class PlayerController : NetworkBehaviour
         networkPlayerName.OnValueChanged += (oldV, newV) => UpdatePlayerVisuals();
         networkPlayerColor.OnValueChanged += (oldV, newV) => UpdatePlayerVisuals();
         UpdatePlayerVisuals();
+        
     }
 
     private void Update()
@@ -91,34 +92,55 @@ public class PlayerController : NetworkBehaviour
         }
 
         float moveX = 0f;
-        float moveZ = 0f;
+float moveZ = 0f;
 
-        if (UnityEngine.InputSystem.Keyboard.current != null)
+if (UnityEngine.InputSystem.Keyboard.current != null)
+{
+    var keyboard = UnityEngine.InputSystem.Keyboard.current;
+
+    if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed)    moveZ =  1f;
+    if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed)  moveZ = -1f;
+    if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed)  moveX = -1f;
+    if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) moveX =  1f;
+}
+
+Vector3 inputDir = new Vector3(moveX, 0f, moveZ).normalized;
+
+    if (inputDir.magnitude > 0.1f)
+    {
+        // Kameranın yatay (yaw) yönünü al — pitch olmadan
+        Camera playerCam = GetComponentInChildren<Camera>();
+        Vector3 camForward, camRight;
+
+        if (playerCam != null)
         {
-            var keyboard = UnityEngine.InputSystem.Keyboard.current;
-            
-            if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) moveZ = 1f;
-            if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) moveZ = -1f;
-            if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) moveX = -1f;
-            if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) moveX = 1f;
-        }
-
-        Vector3 moveDir = new Vector3(moveX, 0f, moveZ).normalized;
-
-        if (moveDir.magnitude > 0.1f)
-        {
-            rb.linearVelocity = new Vector3(moveDir.x * moveSpeed, rb.linearVelocity.y, moveDir.z * moveSpeed);
-            
-            Quaternion targetRotation = Quaternion.LookRotation(moveDir);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 15f);
-            
-            SetRunningStateServerRpc(true);
+            // Kameranın yalnızca yatay bileşenini kullan
+            camForward = Vector3.ProjectOnPlane(playerCam.transform.forward, Vector3.up).normalized;
+            camRight   = Vector3.ProjectOnPlane(playerCam.transform.right,   Vector3.up).normalized;
         }
         else
         {
-            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-            SetRunningStateServerRpc(false);
+            // Kamera yoksa dünya yönlerini kullan
+            camForward = Vector3.forward;
+            camRight   = Vector3.right;
         }
+
+        // Girdiyi kamera yönüne göre dönüştür
+        Vector3 moveDir = (camForward * inputDir.z + camRight * inputDir.x).normalized;
+
+        rb.linearVelocity = new Vector3(moveDir.x * moveSpeed, rb.linearVelocity.y, moveDir.z * moveSpeed);
+
+        // Karakteri hareket yönüne döndür (kameradan bağımsız)
+        Quaternion targetRotation = Quaternion.LookRotation(moveDir);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 15f);
+
+        SetRunningStateServerRpc(true);
+    }
+    else
+    {
+        rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+        SetRunningStateServerRpc(false);
+    }
 
         if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame)
         {
