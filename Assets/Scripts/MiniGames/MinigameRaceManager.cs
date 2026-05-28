@@ -2,22 +2,33 @@ using Unity.Netcode;
 using UnityEngine;
 using TMPro;
 using System.Collections;
+using System.Collections.Generic;
 
 public class MinigameRaceManager : NetworkBehaviour
 {
     public static MinigameRaceManager Instance { get; private set; }
 
     [Header("Yarış Ayarları")]
-    [SerializeField] private float gameDuration = 45f; // Başlangıç süresi
+    [SerializeField] private float gameDuration = 120f;
     [SerializeField] private TMP_Text timerText;
+
     [Header("UI Bildirim Ayarları")]
-    [SerializeField] private TMP_Text finishedStatusText; // Sahnedeki "Bitirdin!" yazısı slotu
-    private NetworkVariable<float> timeRemaining = new NetworkVariable<float>(45f);
+    [SerializeField] private TMP_Text finishedStatusText;
+
+    private NetworkVariable<float> timeRemaining = new NetworkVariable<float>(
+        120f,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
     private bool gameEnded = false;
+    private int totalPlayers = 0;
+    private int finishedCount = 0;
 
     private void Awake()
     {
         if (Instance == null) Instance = this;
+        else Destroy(gameObject);
     }
 
     public override void OnNetworkSpawn()
@@ -25,9 +36,17 @@ public class MinigameRaceManager : NetworkBehaviour
         if (IsServer)
         {
             timeRemaining.Value = gameDuration;
+            // Sahnedeki toplam oyuncu sayısını al
+            totalPlayers = NetworkManager.Singleton.ConnectedClients.Count;
             StartCoroutine(TimerTick());
         }
+
         timeRemaining.OnValueChanged += UpdateTimerUI;
+        // Başlangıçta UI'ı ayarla
+        UpdateTimerUI(0, timeRemaining.Value);
+
+        if (finishedStatusText != null)
+            finishedStatusText.gameObject.SetActive(false);
     }
 
     private IEnumerator TimerTick()
@@ -35,64 +54,62 @@ public class MinigameRaceManager : NetworkBehaviour
         while (timeRemaining.Value > 0 && !gameEnded)
         {
             yield return new WaitForSeconds(1f);
-            timeRemaining.Value -= 1f;
+            timeRemaining.Value = Mathf.Max(0, timeRemaining.Value - 1f);
         }
 
-        if (timeRemaining.Value <= 0 && !gameEnded)
-        {
+        if (!gameEnded)
             EndMinigame();
-        }
     }
 
     private void UpdateTimerUI(float oldVal, float newVal)
     {
         if (timerText != null)
-        {
             timerText.text = $"SÜRE: {Mathf.CeilToInt(newVal)}s";
-        }
     }
 
-    // Server-Authoritative: Bir oyuncu bitiş çizgisine girdiğinde tetiklenir
     public void PlayerFinished(ulong clientId)
     {
         if (!IsServer || gameEnded) return;
 
-        int scoreReward = Mathf.CeilToInt(timeRemaining.Value);
-        if (scoreReward < 0) scoreReward = 0;
+        finishedCount++;
 
+        // Kalan süre kadar puan ver
+        int scoreReward = Mathf.Max(0, Mathf.CeilToInt(timeRemaining.Value));
         RelayManager.Instance.AddScore(clientId, scoreReward);
+
         Debug.Log($"Oyuncu {clientId} bitirdi! Puan: {scoreReward}");
 
-        // YENİ: Bitiş çizgisini geçen oyuncunun kendi ekranına bildirim yolluyoruz
-        NotifyFinishedClientRpc(clientId);
+        // Süreyi 10 azalt (minimum 5 saniye kalsın)
+        timeRemaining.Value = Mathf.Max(5f, timeRemaining.Value - 10f);
 
-        if (timeRemaining.Value > 5f)
-        {
-            timeRemaining.Value -= 5f;
-        }
+        // O oyuncunun ekranına bildirim gönder
+        NotifyFinishedClientRpc(clientId, scoreReward);
+
+        // Tüm oyuncular bitirdiyse oyunu bitir
+        if (finishedCount >= totalPlayers)
+            EndMinigame();
     }
-    
+
     [ClientRpc]
-    private void NotifyFinishedClientRpc(ulong finishedClientId)
+    private void NotifyFinishedClientRpc(ulong finishedClientId, int score)
     {
-        // Eğer bu bilgisayarın yerel oyuncusu bitiş çizgisini geçen oyuncuysa ekrana yazıyı bas
-        if (NetworkManager.Singleton.LocalClientId == finishedClientId)
+        if (NetworkManager.Singleton.LocalClientId != finishedClientId) return;
+
+        if (finishedStatusText != null)
         {
-            if (finishedStatusText != null)
-            {
-                finishedStatusText.text = "<color=green>BİTİŞ ÇİZGİSİNE ULAŞILDI!</color>\nDiğer oyuncular bekleniyor...";
-                finishedStatusText.gameObject.SetActive(true);
-            }
+            finishedStatusText.gameObject.SetActive(true);
+            finishedStatusText.text =
+                $"<color=green>✓ BİTİŞ ÇİZGİSİNE ULAŞILDI!</color>\n" +
+                $"<color=yellow>+{score} puan kazandın!</color>\n" +
+                $"Diğer oyuncular bekleniyor...";
         }
     }
+
     public void EndMinigame()
     {
         if (!IsServer || gameEnded) return;
-        gameEnded = false; // Döngü koruması
-
-        Debug.Log("Süre bitti veya herkes bitirdi. Skor perdesine geçiliyor...");
-        
-        // RelayManager üzerinden bir sonraki sahneye (Scoreboard) geçiş tetikle
+        gameEnded = true; // DÜZELTME: false değil true olmalı
+        Debug.Log("Minigame bitti. Scoreboard'a geçiliyor...");
         RelayManager.Instance.LoadNextMinigame();
     }
 

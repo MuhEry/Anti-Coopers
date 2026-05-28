@@ -1,25 +1,26 @@
 using Unity.Netcode;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class RaceFinishLine : MonoBehaviour
 {
+    // Her oyuncu için ayrı ayrı takip — tek triggered tüm oyuncuları bloklıyordu
+    private HashSet<ulong> finishedClients = new HashSet<ulong>();
+
     private void OnTriggerEnter(Collider other)
     {
-        // Sadece sunucu tetiklemeleri kontrol etmeli ve çarpan obje oyuncu olmalı
         if (!NetworkManager.Singleton.IsServer) return;
+        if (!other.CompareTag("Player")) return;
 
-        if (other.CompareTag("Player"))
-        {
-            NetworkObject netObj = other.GetComponent<NetworkObject>();
-            if (netObj != null)
-            {
-                // Yarış yöneticisine hangi ClientID'nin bitirdiğini haber ver
-                MinigameRaceManager.Instance.PlayerFinished(netObj.OwnerClientId);
-                
-                // Oyuncunun bitiş alanında kalıp sürekli puan üretmesini önlemek için objeyi deaktif edebiliriz
-                // veya oyuncu scriptine "bitti" bayrağı ekleyebiliriz. Şimdilik engellemek için:
-                other.gameObject.SetActive(false); 
-            }
-        }
+        NetworkObject netObj = other.GetComponent<NetworkObject>();
+        if (netObj == null) return;
+
+        ulong clientId = netObj.OwnerClientId;
+
+        // Bu oyuncu daha önce geçmediyse işle
+        if (finishedClients.Contains(clientId)) return;
+
+        finishedClients.Add(clientId);
+        MinigameRaceManager.Instance.PlayerFinished(clientId);
     }
 }
