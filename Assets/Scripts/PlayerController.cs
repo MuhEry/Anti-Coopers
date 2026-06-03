@@ -1,7 +1,7 @@
 using Unity.Netcode;
 using Unity.Collections;
 using UnityEngine;
-using TMPro; // YENİ: TextMeshPro bileşenini kullanabilmek için ekledik
+using TMPro;
 
 public class PlayerController : NetworkBehaviour
 {
@@ -23,9 +23,8 @@ public class PlayerController : NetworkBehaviour
     [SerializeField] private LayerMask groundLayer; 
 
     [Header("UI Ayarları")]
-    [SerializeField] private TMP_Text nameTagText; // YENİ: Başın üzerindeki metin kutusu slotu
+    [SerializeField] private TMP_Text nameTagText;
 
-    // Network Değişkenleri
     public NetworkVariable<FixedString32Bytes> networkPlayerName = new NetworkVariable<FixedString32Bytes>("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<Color> networkPlayerColor = new NetworkVariable<Color>(Color.white, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
@@ -35,6 +34,7 @@ public class PlayerController : NetworkBehaviour
     
     private float nextPunchTime = 0f; 
     private bool isGrounded = true;   
+    private Transform cameraTransform;
 
     private void Start()
     {
@@ -57,13 +57,22 @@ public class PlayerController : NetworkBehaviour
         networkPlayerName.OnValueChanged += (oldV, newV) => UpdatePlayerVisuals();
         networkPlayerColor.OnValueChanged += (oldV, newV) => UpdatePlayerVisuals();
         UpdatePlayerVisuals();
-        
+
+        if (IsOwner)
+        {
+            var vCam = FindFirstObjectByType<Unity.Cinemachine.CinemachineCamera>();
+            if (vCam != null)
+            {
+                vCam.Follow = transform;
+            }
+        }
     }
 
     private void Update()
     {
         if (!IsOwner) return;
 
+        // Sersemleme Kontrolü
         if (isStunned)
         {
             stunTimer -= Time.deltaTime;
@@ -72,18 +81,29 @@ public class PlayerController : NetworkBehaviour
                 isStunned = false;
                 SetStunStateServerRpc(false);
             }
+            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             return; 
         }
 
+        // Zemin Kontrolü
         if (groundCheckPoint != null)
         {
             isGrounded = Physics.CheckSphere(groundCheckPoint.position, groundCheckRadius, groundLayer);
         }
         
+        // --- HAREKET GİRDİLERİ ---
+        float moveX = 0f;
+        float moveZ = 0f;
+
+        // 1. Klavye (PC)
         if (UnityEngine.InputSystem.Keyboard.current != null)
         {
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
-            
+            if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) moveZ = 1f;
+            if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) moveZ = -1f;
+            if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) moveX = -1f;
+            if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) moveX = 1f;
+
             if (keyboard.spaceKey.wasPressedThisFrame && isGrounded)
             {
                 rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
@@ -91,70 +111,101 @@ public class PlayerController : NetworkBehaviour
             }
         }
 
-        float moveX = 0f;
-float moveZ = 0f;
-
-if (UnityEngine.InputSystem.Keyboard.current != null)
-{
-    var keyboard = UnityEngine.InputSystem.Keyboard.current;
-
-    if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed)    moveZ =  1f;
-    if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed)  moveZ = -1f;
-    if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed)  moveX = -1f;
-    if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) moveX =  1f;
-}
-
-Vector3 inputDir = new Vector3(moveX, 0f, moveZ).normalized;
-
-    if (inputDir.magnitude > 0.1f)
-    {
-        // Kameranın yatay (yaw) yönünü al — pitch olmadan
-        Camera playerCam = GetComponentInChildren<Camera>();
-        Vector3 camForward, camRight;
-
-        if (playerCam != null)
+        // 2. Mobil Joystick
+        if (UnityEngine.InputSystem.Gamepad.current != null)
         {
-            // Kameranın yalnızca yatay bileşenini kullan
-            camForward = Vector3.ProjectOnPlane(playerCam.transform.forward, Vector3.up).normalized;
-            camRight   = Vector3.ProjectOnPlane(playerCam.transform.right,   Vector3.up).normalized;
+            Vector2 stickInput = UnityEngine.InputSystem.Gamepad.current.leftStick.ReadValue();
+            if (stickInput.magnitude > 0.05f)
+            {
+                moveX = stickInput.x;
+                moveZ = stickInput.y;
+            }
+
+            if (UnityEngine.InputSystem.Gamepad.current.buttonSouth.wasPressedThisFrame && isGrounded)
+            {
+                rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
+                SetJumpTriggerServerRpc();
+            }
+        }
+
+        Vector3 inputDir = new Vector3(moveX, 0f, moveZ);
+
+        if (inputDir.magnitude > 0.05f)
+        {
+            inputDir.Normalize();
+            
+            // Kamerayı çalışma anında garantiye alıyoruz
+            if (cameraTransform == null)
+            {
+                var tpCam = GetComponent<ThirdPersonCamera>();
+                if (tpCam != null && tpCam.CameraTransform != null)
+                    cameraTransform = tpCam.CameraTransform;
+            }
+
+            Vector3 moveDir = inputDir;
+
+            if (cameraTransform != null)
+            {
+                Vector3 cameraForward = cameraTransform.forward;
+                cameraForward.y = 0f;
+                cameraForward.Normalize();
+
+                Vector3 cameraRight = cameraTransform.right;
+                cameraRight.y = 0f;
+                cameraRight.Normalize();
+
+                moveDir = (cameraForward * inputDir.z + cameraRight * inputDir.x).normalized;
+            }
+
+            // Fiziksel İlerleme
+            rb.linearVelocity = new Vector3(moveDir.x * moveSpeed, rb.linearVelocity.y, moveDir.z * moveSpeed);
+            
+            // DÜZELTİLDİ: Karakter artık her karede bastığın yöne doğru pürüzsüzce yüzünü dönecek
+            if (moveDir.magnitude > 0.05f)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(moveDir);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 15f);
+            }
+            
+            SetRunningStateServerRpc(true);
         }
         else
         {
-            // Kamera yoksa dünya yönlerini kullan
-            camForward = Vector3.forward;
-            camRight   = Vector3.right;
+            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            SetRunningStateServerRpc(false);
         }
 
-        // Girdiyi kamera yönüne göre dönüştür
-        Vector3 moveDir = (camForward * inputDir.z + camRight * inputDir.x).normalized;
-
-        rb.linearVelocity = new Vector3(moveDir.x * moveSpeed, rb.linearVelocity.y, moveDir.z * moveSpeed);
-
-        // Karakteri hareket yönüne döndür (kameradan bağımsız)
-        Quaternion targetRotation = Quaternion.LookRotation(moveDir);
-        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 15f);
-
-        SetRunningStateServerRpc(true);
-    }
-    else
-    {
-        rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-        SetRunningStateServerRpc(false);
-    }
-
+        // --- DÜZELTİLDİ: UI DOSTU YUMRUK SİSTEMİ ---
+        bool punchPressed = false;
+        
+        // ÖNEMLİ: Eğer fare tıklaması bir UI butonunun üzerindeyse, PC mekaniği olan yumruğu tetikleme!
         if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame)
         {
-            if (Time.time >= nextPunchTime)
+            if (UnityEngine.EventSystems.EventSystem.current != null && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
             {
-                PunchActionServerRpc();
-                nextPunchTime = Time.time + punchCooldown; 
+                punchPressed = true;
             }
+        }
+            
+        if (UnityEngine.InputSystem.Gamepad.current != null && UnityEngine.InputSystem.Gamepad.current.buttonWest.wasPressedThisFrame)
+        {
+            punchPressed = true;
+        }
+
+        if (punchPressed && Time.time >= nextPunchTime)
+        {
+            PunchActionServerRpc();
+            nextPunchTime = Time.time + punchCooldown; 
+        }
+
+        if (animator != null)
+        {
+            animator.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
         }
     }
 
     private void UpdatePlayerVisuals()
     {
-        // YENİ: Lobiden gelen ağ ismini TextMeshPro alanına zorla yazdırıyoruz
         if (nameTagText != null)
         {
             nameTagText.text = networkPlayerName.Value.ToString();
@@ -219,9 +270,9 @@ Vector3 inputDir = new Vector3(moveX, 0f, moveZ).normalized;
     [ClientRpc]
     private void TakeHitClientRpc(Vector3 force)
     {
-        rb.AddForce(force, ForceMode.Impulse);
         if (IsOwner)
         {
+            rb.AddForce(force, ForceMode.Impulse);
             isStunned = true;
             stunTimer = 1.5f; 
             SetStunStateServerRpc(true);
@@ -251,7 +302,25 @@ Vector3 inputDir = new Vector3(moveX, 0f, moveZ).normalized;
             Gizmos.DrawWireSphere(groundCheckPoint.position, groundCheckRadius);
         }
     }
+    public void OnMobileJumpPressed()
+    {
+        if (!IsOwner || isStunned) return;
+        if (isGrounded)
+        {
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
+            SetJumpTriggerServerRpc();
+        }
+    }
 
+    public void OnMobilePunchPressed()
+    {
+        if (!IsOwner || isStunned) return;
+        if (Time.time >= nextPunchTime)
+        {
+            PunchActionServerRpc();
+            nextPunchTime = Time.time + punchCooldown;
+        }
+    }
     public override void OnNetworkDespawn()
     {
         networkPlayerName.OnValueChanged -= (oldV, newV) => UpdatePlayerVisuals();

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 using Unity.Netcode;
 
 public class ThirdPersonCamera : NetworkBehaviour
@@ -11,7 +12,7 @@ public class ThirdPersonCamera : NetworkBehaviour
     [SerializeField] private float distance = 5f;
     [SerializeField] private float heightOffset = 1.5f;
 
-    [Header("Mouse Hassasiyeti")]
+    [Header("PC Mouse Hassasiyeti")]
     [SerializeField] private float mouseSensitivityX = 0.2f;
     [SerializeField] private float mouseSensitivityY = 0.2f;
 
@@ -24,6 +25,7 @@ public class ThirdPersonCamera : NetworkBehaviour
     [SerializeField] private LayerMask collisionMask;
 
     private Camera cam;
+    public Transform CameraTransform => cam != null ? cam.transform : null;
     private float yaw;
     private float pitch = 15f;
 
@@ -31,14 +33,13 @@ public class ThirdPersonCamera : NetworkBehaviour
     {
         if (!IsOwner)
         {
-            // Bu oyuncuya ait olmayan kameraları kapat
             Camera[] cams = GetComponentsInChildren<Camera>();
             foreach (var c in cams) c.gameObject.SetActive(false);
             enabled = false;
             return;
         }
 
-        cam = GetComponentInChildren<Camera>(true); // inactive olanı da bul
+        cam = GetComponentInChildren<Camera>(true);
         if (cam != null)
         {
             cam.gameObject.SetActive(true);
@@ -51,11 +52,13 @@ public class ThirdPersonCamera : NetworkBehaviour
             camObj.AddComponent<AudioListener>();
         }
 
-        // Başlangıç yaw'ını karakterin yönüne eşitle
         yaw = transform.eulerAngles.y;
 
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        if (!IsMobilePlatform())
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
 
         if (followTarget == null) followTarget = transform;
     }
@@ -64,39 +67,60 @@ public class ThirdPersonCamera : NetworkBehaviour
     {
         if (!IsOwner || cam == null || followTarget == null) return;
 
-        // Yeni Input System ile mouse delta
-        Vector2 mouseDelta = Mouse.current.delta.ReadValue();
+        // Mobilde MobileTouchpadCamera kamerayı döndürüyor
+        if (!IsMobilePlatform())
+            HandleMouseInput();
 
-        // Karakterin dönüşünden BAĞIMSIZ — sadece mouse birikimli açı
-        yaw   += mouseDelta.x * mouseSensitivityX;
-        pitch -= mouseDelta.y * mouseSensitivityY;
+        ApplyCameraPosition();
+    }
+
+    private void HandleMouseInput()
+    {
+        if (Mouse.current == null) return;
+        Vector2 delta = Mouse.current.delta.ReadValue();
+        yaw   += delta.x * mouseSensitivityX;
+        pitch -= delta.y * mouseSensitivityY;
         pitch  = Mathf.Clamp(pitch, minVerticalAngle, maxVerticalAngle);
+    }
 
-        // Pivot nokta (karakter pozisyonu değişse de yaw/pitch sabit kalır)
+    // MobileTouchpadCamera tarafından çağrılır
+    public void AddCameraInput(float deltaX, float deltaY)
+    {
+        yaw   += deltaX;
+        pitch -= deltaY;
+        pitch  = Mathf.Clamp(pitch, minVerticalAngle, maxVerticalAngle);
+    }
+
+    private void ApplyCameraPosition()
+    {
         Vector3 pivotPoint = followTarget.position + Vector3.up * heightOffset;
-
-        // Kamera pozisyonunu yaw+pitch'e göre hesapla (karakterin rotasyonunu hiç kullanma)
         Quaternion camRotation = Quaternion.Euler(pitch, yaw, 0f);
-        Vector3 desiredOffset   = camRotation * new Vector3(0f, 0f, -distance);
-        Vector3 desiredPosition = pivotPoint + desiredOffset;
+        Vector3 desiredPosition = pivotPoint + camRotation * new Vector3(0f, 0f, -distance);
 
-        // Çarpışma kontrolü
         Vector3 finalPosition = desiredPosition;
         Vector3 dir = (desiredPosition - pivotPoint).normalized;
-        float   dist = Vector3.Distance(pivotPoint, desiredPosition);
+        float dist = Vector3.Distance(pivotPoint, desiredPosition);
 
         if (Physics.SphereCast(pivotPoint, collisionRadius, dir, out RaycastHit hit, dist, collisionMask))
-        {
             finalPosition = hit.point + hit.normal * collisionRadius;
-        }
 
         cam.transform.position = finalPosition;
         cam.transform.LookAt(pivotPoint);
     }
 
+    private bool IsMobilePlatform()
+    {
+        #if UNITY_EDITOR
+        return UnityEditor.EditorUserBuildSettings.activeBuildTarget == UnityEditor.BuildTarget.iOS
+            || UnityEditor.EditorUserBuildSettings.activeBuildTarget == UnityEditor.BuildTarget.Android;
+        #else
+        return Application.isMobilePlatform;
+        #endif
+    }
+
     public override void OnNetworkDespawn()
     {
-        if (IsOwner)
+        if (IsOwner && !IsMobilePlatform())
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
