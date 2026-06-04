@@ -516,7 +516,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 4100720278
+  GlobalObjectIdHash: 3355412602
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -681,7 +681,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8419312884447450180}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: a25de5ce07fa4da42af00c98ad4f0d06, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0

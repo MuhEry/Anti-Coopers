@@ -344,7 +344,6 @@ GameObject:
   - component: {fileID: 5546017759779305162}
   - component: {fileID: 6026491808326734153}
   - component: {fileID: 4815253343221995665}
-  - component: {fileID: 185305167189399699}
   - component: {fileID: 2344542867227415519}
   m_Layer: 5
   m_Name: Punch_Button
@@ -467,19 +466,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
---- !u!114 &185305167189399699
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3376937134638955507}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6d54531977ecb194c95e2d3aa7a5d72a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.OnScreen.OnScreenButton
-  m_ControlPath: <Mouse>/leftButton
 --- !u!114 &2344542867227415519
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -581,7 +567,6 @@ GameObject:
   - component: {fileID: 7402642065091544939}
   - component: {fileID: 3298499640796003931}
   - component: {fileID: 5250530707438614963}
-  - component: {fileID: 4217774072099565255}
   - component: {fileID: 5841070352962173942}
   m_Layer: 5
   m_Name: Jump_Button
@@ -704,19 +689,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
---- !u!114 &4217774072099565255
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3877402149534117125}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6d54531977ecb194c95e2d3aa7a5d72a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.OnScreen.OnScreenButton
-  m_ControlPath: <Keyboard>/space
 --- !u!114 &5841070352962173942
 MonoBehaviour:
   m_ObjectHideFlags: 0
