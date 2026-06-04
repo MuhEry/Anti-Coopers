@@ -72,6 +72,12 @@ public class PlayerController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
+        if (MinigameRaceManager.Instance != null && !MinigameRaceManager.Instance.IsGameStarted)
+        {
+            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            SetRunningStateServerRpc(false);
+            return;
+        }
         // Sersemleme Kontrolü
         if (isStunned)
         {

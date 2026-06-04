@@ -709,10 +709,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ThirdPersonCamera
   ShowTopMostFoldoutHeaderGroup: 1
   followTarget: {fileID: 6007297091461264925}
-  distance: 5
+  distance: 4
   heightOffset: 2
-  mouseSensitivityX: 0.4
-  mouseSensitivityY: 0.4
+  mouseSensitivityX: 0.3
+  mouseSensitivityY: 0.3
   minVerticalAngle: -20
   maxVerticalAngle: 60
   collisionRadius: 0.3

@@ -12,14 +12,20 @@ public class MinigameRaceManager : NetworkBehaviour
     [SerializeField] private float gameDuration = 120f;
     [SerializeField] private TMP_Text timerText;
 
+    [Header("Geri Sayım Ayarları")]
+    [SerializeField] private TMP_Text countdownText; // YENİ: Sahneye eklenecek
+
     [Header("UI Bildirim Ayarları")]
     [SerializeField] private TMP_Text finishedStatusText;
 
     private NetworkVariable<float> timeRemaining = new NetworkVariable<float>(
-        120f,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
+        120f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    // PlayerController bu değeri okuyarak hareket edip edemeyeceğini anlıyor
+    private NetworkVariable<bool> gameStarted = new NetworkVariable<bool>(
+        false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public bool IsGameStarted => gameStarted.Value;
 
     private bool gameEnded = false;
     private int totalPlayers = 0;
@@ -36,17 +42,53 @@ public class MinigameRaceManager : NetworkBehaviour
         if (IsServer)
         {
             timeRemaining.Value = gameDuration;
-            // Sahnedeki toplam oyuncu sayısını al
             totalPlayers = NetworkManager.Singleton.ConnectedClients.Count;
-            StartCoroutine(TimerTick());
+            StartCoroutine(StartCountdown()); // Timer yerine önce geri sayım
         }
 
         timeRemaining.OnValueChanged += UpdateTimerUI;
-        // Başlangıçta UI'ı ayarla
         UpdateTimerUI(0, timeRemaining.Value);
 
         if (finishedStatusText != null)
             finishedStatusText.gameObject.SetActive(false);
+
+        if (countdownText != null)
+            countdownText.gameObject.SetActive(false);
+    }
+
+    private IEnumerator StartCountdown()
+    {
+        gameStarted.Value = false;
+
+        for (int i = 3; i > 0; i--)
+        {
+            ShowCountdownClientRpc(i.ToString(), false);
+            yield return new WaitForSeconds(1f);
+        }
+
+        ShowCountdownClientRpc("Başla!", true);
+        yield return new WaitForSeconds(0.8f);
+        HideCountdownClientRpc();
+
+        gameStarted.Value = true;
+        StartCoroutine(TimerTick());
+    }
+
+    [ClientRpc]
+    private void ShowCountdownClientRpc(string text, bool isGo)
+    {
+        if (countdownText == null) return;
+        countdownText.gameObject.SetActive(true);
+        countdownText.text = isGo
+            ? $"<color=green><b>{text}</b></color>"
+            : $"<color=white><b>{text}</b></color>";
+    }
+
+    [ClientRpc]
+    private void HideCountdownClientRpc()
+    {
+        if (countdownText != null)
+            countdownText.gameObject.SetActive(false);
     }
 
     private IEnumerator TimerTick()
@@ -56,9 +98,7 @@ public class MinigameRaceManager : NetworkBehaviour
             yield return new WaitForSeconds(1f);
             timeRemaining.Value = Mathf.Max(0, timeRemaining.Value - 1f);
         }
-
-        if (!gameEnded)
-            EndMinigame();
+        if (!gameEnded) EndMinigame();
     }
 
     private void UpdateTimerUI(float oldVal, float newVal)
@@ -72,29 +112,18 @@ public class MinigameRaceManager : NetworkBehaviour
         if (!IsServer || gameEnded) return;
 
         finishedCount++;
-
-        // Kalan süre kadar puan ver
         int scoreReward = Mathf.Max(0, Mathf.CeilToInt(timeRemaining.Value));
         RelayManager.Instance.AddScore(clientId, scoreReward);
-
-        Debug.Log($"Oyuncu {clientId} bitirdi! Puan: {scoreReward}");
-
-        // Süreyi 10 azalt (minimum 5 saniye kalsın)
         timeRemaining.Value = Mathf.Max(5f, timeRemaining.Value - 10f);
-
-        // O oyuncunun ekranına bildirim gönder
         NotifyFinishedClientRpc(clientId, scoreReward);
 
-        // Tüm oyuncular bitirdiyse oyunu bitir
-        if (finishedCount >= totalPlayers)
-            EndMinigame();
+        if (finishedCount >= totalPlayers) EndMinigame();
     }
 
     [ClientRpc]
     private void NotifyFinishedClientRpc(ulong finishedClientId, int score)
     {
         if (NetworkManager.Singleton.LocalClientId != finishedClientId) return;
-
         if (finishedStatusText != null)
         {
             finishedStatusText.gameObject.SetActive(true);
@@ -108,8 +137,7 @@ public class MinigameRaceManager : NetworkBehaviour
     public void EndMinigame()
     {
         if (!IsServer || gameEnded) return;
-        gameEnded = true; // DÜZELTME: false değil true olmalı
-        Debug.Log("Minigame bitti. Scoreboard'a geçiliyor...");
+        gameEnded = true;
         RelayManager.Instance.LoadNextMinigame();
     }
 
