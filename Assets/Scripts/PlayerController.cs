@@ -32,6 +32,9 @@ public class PlayerController : NetworkBehaviour
     private bool isStunned = false;
     private float stunTimer = 0f;
     
+    // AĞ OPTİMİZASYONU İÇİN KRİTİK DEĞİŞKEN
+    private bool isRunningLocal = false;    
+    
     private float nextPunchTime = 0f; 
     private bool isGrounded = true;   
     private Transform cameraTransform;
@@ -72,12 +75,19 @@ public class PlayerController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
+        // Oyun başlamadıysa hareketi kilitle
         if (MinigameRaceManager.Instance != null && !MinigameRaceManager.Instance.IsGameStarted)
         {
             rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-            SetRunningStateServerRpc(false);
+            
+            if (isRunningLocal)
+            {
+                isRunningLocal = false;
+                SetRunningStateServerRpc(false);
+            }
             return;
         }
+        
         // Sersemleme Kontrolü
         if (isStunned)
         {
@@ -135,8 +145,16 @@ public class PlayerController : NetworkBehaviour
         }
 
         Vector3 inputDir = new Vector3(moveX, 0f, moveZ);
+        bool isMoving = inputDir.magnitude > 0.05f;
 
-        if (inputDir.magnitude > 0.05f)
+        // --- AĞ OPTİMİZASYONU: Sadece durum değiştiğinde sunucuya mesaj at ---
+        if (isMoving != isRunningLocal)
+        {
+            isRunningLocal = isMoving;
+            SetRunningStateServerRpc(isRunningLocal);
+        }
+
+        if (isMoving)
         {
             inputDir.Normalize();
             
@@ -146,6 +164,8 @@ public class PlayerController : NetworkBehaviour
                 var tpCam = GetComponent<ThirdPersonCamera>();
                 if (tpCam != null && tpCam.CameraTransform != null)
                     cameraTransform = tpCam.CameraTransform;
+                else if (Camera.main != null)
+                    cameraTransform = Camera.main.transform;
             }
 
             Vector3 moveDir = inputDir;
@@ -166,25 +186,18 @@ public class PlayerController : NetworkBehaviour
             // Fiziksel İlerleme
             rb.linearVelocity = new Vector3(moveDir.x * moveSpeed, rb.linearVelocity.y, moveDir.z * moveSpeed);
             
-            // DÜZELTİLDİ: Karakter artık her karede bastığın yöne doğru pürüzsüzce yüzünü dönecek
-            if (moveDir.magnitude > 0.05f)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(moveDir);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 15f);
-            }
-            
-            SetRunningStateServerRpc(true);
+            // Karakterin yönünü dönmesi
+            Quaternion targetRotation = Quaternion.LookRotation(moveDir);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 15f);
         }
         else
         {
             rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-            SetRunningStateServerRpc(false);
         }
 
-        // --- DÜZELTİLDİ: UI DOSTU YUMRUK SİSTEMİ ---
+        // --- UI DOSTU YUMRUK SİSTEMİ ---
         bool punchPressed = false;
         
-        // ÖNEMLİ: Eğer fare tıklaması bir UI butonunun üzerindeyse, PC mekaniği olan yumruğu tetikleme!
         if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame)
         {
             if (UnityEngine.EventSystems.EventSystem.current != null && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())

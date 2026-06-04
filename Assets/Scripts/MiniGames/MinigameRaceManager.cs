@@ -60,7 +60,7 @@ public class MinigameRaceManager : NetworkBehaviour
     {
         gameStarted.Value = false;
 
-        for (int i = 3; i > 0; i--)
+        for (int i = 5; i > 0; i--)
         {
             ShowCountdownClientRpc(i.ToString(), false);
             yield return new WaitForSeconds(1f);

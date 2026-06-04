@@ -320,7 +320,9 @@ public class RelayManager : MonoBehaviour
             int spawnIndex = 0;
             foreach (ulong clientId in clientsCompleted)
             {
-                Vector3 spawnPosition = new Vector3(spawnIndex * 2.5f, 1f, 0f);
+                Vector3 spawnPosition = SpawnPointManager.Instance != null
+                ? SpawnPointManager.Instance.GetSpawnPosition(spawnIndex)
+                : new Vector3(spawnIndex * 2.5f, 1f, 0f);
                 GameObject newPlayer = Instantiate(gamePlayerPrefab, spawnPosition, Quaternion.identity);
                 newPlayer.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId, true);
 
