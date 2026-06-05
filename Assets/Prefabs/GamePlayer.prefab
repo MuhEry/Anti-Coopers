@@ -619,12 +619,12 @@ MonoBehaviour:
   jumpForce: 4.5
   animator: {fileID: 1909078878207846055}
   punchPoint: {fileID: 4280125473408626209}
-  punchRadius: 1
+  punchRadius: 1.3
   playerLayer:
     serializedVersion: 2
     m_Bits: 64
-  knockbackForce: 5
-  punchCooldown: 1.7
+  knockbackForce: 15
+  punchCooldown: 1.5
   groundCheckPoint: {fileID: 1371746242755234560}
   groundCheckRadius: 0.3
   groundLayer:

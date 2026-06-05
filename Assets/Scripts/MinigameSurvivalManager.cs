@@ -62,7 +62,7 @@ public class MinigameSurvivalManager : NetworkBehaviour
             yield return new WaitForSeconds(1f);
         }
 
-        ShowCountdownClientRpc("GİT!", true);
+        ShowCountdownClientRpc("YUKARI ÇIK!", true);
         yield return new WaitForSeconds(0.8f);
         HideCountdownClientRpc();
         gameStarted.Value = true;
