@@ -26,16 +26,21 @@ public class RelayManager : MonoBehaviour
     [SerializeField] private UnityEngine.UI.Button startGameButton;
     [SerializeField] private TMP_Dropdown mapDropdown; 
     [SerializeField] private TMP_Text playlistText; 
+    [SerializeField] private TMP_Text errorText; // YENİ: Hata ve bildirim mesajları için
 
     [Header("Oyun İçi Doğum Ayarları")]
     [SerializeField] private GameObject gamePlayerPrefab; 
 
     [HideInInspector] public string LocalProfileName;
     private Dictionary<ulong, (string name, Color32 color)> savedPlayerData = new Dictionary<ulong, (string, Color32)>();
+    
+    // YENİ: Slot (Boş Koltuk) takip sistemi ve Oyun durumu
+    private Dictionary<ulong, int> clientSlots = new Dictionary<ulong, int>();
+    private bool isGameInProgress = false; 
+
     private List<string> gamePlaylist = new List<string>();
     private bool showingScoreboard = false;
     private int currentMapIndex = 0;
-
     private Dictionary<ulong, int> playerScores = new Dictionary<ulong, int>();
 
     private void Awake()
@@ -49,7 +54,15 @@ public class RelayManager : MonoBehaviour
         mainMenuPanel.SetActive(true);
         lobbyPanel.SetActive(false);
         hostMapSelectionPanel.SetActive(false);
-        if (startGameButton != null) startGameButton.gameObject.SetActive(false); // Başta kapalı tut
+        if (startGameButton != null) startGameButton.gameObject.SetActive(false); 
+        if (errorText != null) errorText.gameObject.SetActive(false);
+
+        // YENİ: Ağ onayı ve kopma olaylarını dinliyoruz
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.ConnectionApprovalCallback = ApprovalCheck;
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnect;
+        }
 
         try
         {
@@ -64,6 +77,93 @@ public class RelayManager : MonoBehaviour
             }
         }
         catch (System.Exception e) { Debug.LogError("Servis hatası: " + e.Message); }
+    }
+
+    // --- YENİ: KAPI GÜVENLİĞİ (CONNECTION APPROVAL) ---
+    private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
+    {
+        // 1. Oyun zaten başladıysa girişi reddet
+        if (isGameInProgress)
+        {
+            response.Approved = false;
+            response.Reason = "Oyun zaten başladı!";
+            return;
+        }
+
+        // 2. Oda 8 kişi (tam kapasite) doluysa reddet
+        if (clientSlots.Count >= 8)
+        {
+            response.Approved = false;
+            response.Reason = "Oda şu an tam kapasite (8/8) dolu!";
+            return;
+        }
+
+        // Her şey uygunsa kapıyı aç
+        response.Approved = true;
+        response.CreatePlayerObject = true;
+    }
+
+    // --- YENİ: SLOT (KOLTUK) SİSTEMİ ---
+    public int AssignSlot(ulong clientId)
+    {
+        if (clientSlots.ContainsKey(clientId)) return clientSlots[clientId];
+        
+        for (int i = 0; i < 8; i++) // Maksimum 8 koltuk aranıyor
+        {
+            if (!clientSlots.ContainsValue(i))
+            {
+                clientSlots.Add(clientId, i);
+                return i;
+            }
+        }
+        return 0; // Hata durumunda 0. koltuğu ver
+    }
+
+    public int GetPlayerSlot(ulong clientId)
+    {
+        if (clientSlots.TryGetValue(clientId, out int slot)) return slot;
+        return 0; // Bulunamazsa 0
+    }
+
+    private void OnClientDisconnect(ulong clientId)
+    {
+        // Çıkan kişinin koltuğunu boşaltıyoruz (Sadece Host yönetir)
+        if (NetworkManager.Singleton.IsServer && clientSlots.ContainsKey(clientId))
+        {
+            clientSlots.Remove(clientId);
+        }
+
+        // Eğer kopan kişi kendimizsek hatayı ekrana bas ve menüye dön
+        if (clientId == NetworkManager.Singleton.LocalClientId)
+        {
+            string reason = NetworkManager.Singleton.DisconnectReason;
+            if (!string.IsNullOrEmpty(reason))
+            {
+                ShowError(reason);
+            }
+            LeaveLobby();
+        }
+        else
+        {
+            UpdatePlayerListUI(); // Başkası çıktıysa listeyi yenile
+        }
+    }
+
+    // --- YENİ: EKRANA BİLGİ/HATA BASMA SİSTEMİ ---
+    public void ShowError(string message)
+    {
+        if (errorText != null)
+        {
+            errorText.gameObject.SetActive(true);
+            errorText.text = $"<color=red>BİLGİ:</color> {message}";
+            CancelInvoke(nameof(HideError));
+            Invoke(nameof(HideError), 4f); // 4 saniye sonra yazıyı kaybet
+        }
+    }
+
+    private void HideError()
+    {
+        if (errorText != null) errorText.gameObject.SetActive(false);
     }
 
     private void SetNicknameBeforeConnect()
@@ -94,21 +194,22 @@ public class RelayManager : MonoBehaviour
 
         try
         {
-            Allocation allocation = await RelayService.Instance.CreateAllocationAsync(3);
+            Allocation allocation = await RelayService.Instance.CreateAllocationAsync(7); // Kendisi hariç 7 (Toplam 8)
             string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
             UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
             
             if (transport != null)
             {
-                // DERLEME HATASI DÜZELTİLDİ: Netcode'un en kararlı Allocation eşleştirme yöntemi
                 transport.SetRelayServerData(
                     allocation.RelayServer.IpV4,
                     (ushort)allocation.RelayServer.Port,
                     allocation.AllocationIdBytes,
                     allocation.Key,
                     allocation.ConnectionData
-                    //allocation.ConnectionData  // Host için hostConnectionData = kendi ConnectionData'sı
                 );
+                
+                isGameInProgress = false; 
+                clientSlots.Clear(); // Yeni host kurduğumuzda koltukları temizle
                 
                 NetworkManager.Singleton.StartHost();
                 NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadCompleted;
@@ -137,12 +238,18 @@ public class RelayManager : MonoBehaviour
         try
         {
             string joinCode = codeInputField.text; 
+
+            if (string.IsNullOrWhiteSpace(joinCode))
+            {
+                ShowError("Geçersiz kod");
+                return; // Kodu burada kes ki boşuna sunucu aramaya çalışmasın
+            }
+
             JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
             UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
             
             if (transport != null)
             {
-                // DERLEME HATASI DÜZELTİLDİ: Netcode'un en kararlı JoinAllocation eşleştirme yöntemi
                 transport.SetRelayServerData(
                     joinAllocation.RelayServer.IpV4,
                     (ushort)joinAllocation.RelayServer.Port,
@@ -162,7 +269,11 @@ public class RelayManager : MonoBehaviour
                 if (startGameButton != null) startGameButton.gameObject.SetActive(false);
             }
         }
-        catch (RelayServiceException e) { Debug.LogError("Relay hatası: " + e.Message); }
+        catch (RelayServiceException) 
+        { 
+            // YENİ: Geçersiz kod girildiğinde hata gösterir
+            ShowError("Oda bulunamadı"); 
+        }
     }
 
     public void UpdatePlayerListUI()
@@ -186,22 +297,10 @@ public class RelayManager : MonoBehaviour
             }
         }
 
-        // Buton görünürse durumunu denetle (Sadece Host'ta çalışır)
         if (NetworkManager.Singleton.IsHost && startGameButton != null && startGameButton.gameObject.activeSelf)
         {
             startGameButton.interactable = allReady && players.Length >= 1 && gamePlaylist.Count > 0; 
         }
-    }
-
-    public bool GetMySavedColor(ulong clientId, out Color32 color)
-    {
-        if (savedPlayerData.TryGetValue(clientId, out var data))
-        {
-            color = data.color;
-            return true;
-        }
-        color = new Color32(255, 255, 255, 255);
-        return false;
     }
 
     public bool GetMySavedData(ulong clientId, out string name, out Color32 color)
@@ -232,20 +331,17 @@ public class RelayManager : MonoBehaviour
     public void AddMapToPlaylist()
     {
         if (mapDropdown == null || mapDropdown.options.Count == 0) return;
-        
         string selectedMap = mapDropdown.options[mapDropdown.value].text;
         gamePlaylist.Add(selectedMap);
         UpdatePlaylistUI();
         UpdatePlayerListUI(); 
     }
 
-    // YENİ İSTEK: Oynatma listesini tamamen sıfırlayan admin fonksiyonu
     public void ClearPlaylist()
     {
         gamePlaylist.Clear();
         UpdatePlaylistUI();
         UpdatePlayerListUI();
-        Debug.Log("Harita oynatma listesi temizlendi.");
     }
 
     private void UpdatePlaylistUI()
@@ -268,6 +364,7 @@ public class RelayManager : MonoBehaviour
     {
         if (NetworkManager.Singleton.IsHost && gamePlaylist.Count > 0)
         {
+            isGameInProgress = true; // Oyunun başladığını sunucuya mühürlüyoruz
             showingScoreboard = false; 
             currentMapIndex = 0;
             NetworkManager.Singleton.SceneManager.LoadScene(gamePlaylist[currentMapIndex], UnityEngine.SceneManagement.LoadSceneMode.Single);
@@ -277,7 +374,6 @@ public class RelayManager : MonoBehaviour
     public void AddScore(ulong clientId, int points)
     {
         if (!NetworkManager.Singleton.IsServer) return;
-
         if (playerScores.ContainsKey(clientId)) { playerScores[clientId] += points; }
         else { playerScores.Add(clientId, points); }
     }
@@ -309,6 +405,7 @@ public class RelayManager : MonoBehaviour
             else
             {
                 Debug.Log("TÜM PLAYLIST BİTTİ!");
+                LeaveLobby(); // Tüm oyun bitince herkesi lobiye veya ana menüye yolla
             }
         }
     }
@@ -317,12 +414,16 @@ public class RelayManager : MonoBehaviour
     {
         if (sceneName.StartsWith("MiniGame_") || sceneName == "GameScene")
         {
-            int spawnIndex = 0;
             foreach (ulong clientId in clientsCompleted)
             {
+                // YENİ: Oyuncunun sahip olduğu koltuk numarasını çekiyoruz
+                int slot = GetPlayerSlot(clientId);
+
+                // YENİ: Sahne içindeki başlangıç noktasını da bu "slot" numarasına göre belirliyoruz
                 Vector3 spawnPosition = SpawnPointManager.Instance != null
-                ? SpawnPointManager.Instance.GetSpawnPosition(spawnIndex)
-                : new Vector3(spawnIndex * 2.5f, 1f, 0f);
+                ? SpawnPointManager.Instance.GetSpawnPosition(slot) 
+                : new Vector3(slot * 2.5f, 1f, 0f); // Oyuncular yarışa koltuk sıralarına göre yan yana başlar!
+
                 GameObject newPlayer = Instantiate(gamePlayerPrefab, spawnPosition, Quaternion.identity);
                 newPlayer.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId, true);
 
@@ -332,7 +433,6 @@ public class RelayManager : MonoBehaviour
                     controller.networkPlayerName.Value = data.name;
                     controller.networkPlayerColor.Value = data.color; 
                 }
-                spawnIndex++;
             }
         }
     }
@@ -340,8 +440,10 @@ public class RelayManager : MonoBehaviour
     public void LeaveLobby()
     {
         if (NetworkManager.Singleton != null) NetworkManager.Singleton.Shutdown();
+        isGameInProgress = false;
         gamePlaylist.Clear();
         playerScores.Clear(); 
+        clientSlots.Clear(); 
         lobbyPanel.SetActive(false);
         mainMenuPanel.SetActive(true);
     }

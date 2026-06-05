@@ -4,35 +4,37 @@ using UnityEngine;
 
 public class LobbyPlayer : NetworkBehaviour
 {
-    // BAĞLANTI DÜZELTİLDİ: Karakter modelleri için SkinnedMeshRenderer dizisi kullanıyoruz
     private SkinnedMeshRenderer[] bodyRenderers; 
 
     public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<bool> isReady = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<Color32> playerColor = new NetworkVariable<Color32>(new Color32(255, 255, 255, 255), NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    
+    // YENİ: Hangi koltukta oturduğunu takip eden ağ değişkeni
+    public NetworkVariable<int> slotIndex = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     private readonly string[] allowedLobbyColors = new string[]
     {
-        "#000000", // Siyah
-        "#FFFFFF", // Beyaz
-        "#00FFFF", // Turkuaz
-        "#FF0000", // Kırmızı
-        "#970094", // Mor
-        "#0000FF", // Mavi
-        "#007300", // Yeşil
-        "#FFFF00"  // Sarı
+        "#000000", "#FFFFFF", "#00FFFF", "#FF0000", "#970094", "#0000FF", "#007300", "#FFFF00" 
     };
 
     public override void OnNetworkSpawn()
     {
-        // ÖNEMLİ: Modelin içindeki tüm boyanabilir parçaları otomatik buluyoruz
         bodyRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
 
         playerName.OnValueChanged += OnPlayerNameChanged;
         isReady.OnValueChanged += OnPlayerReadyChanged;
         playerColor.OnValueChanged += OnPlayerColorInternalChanged;
+        slotIndex.OnValueChanged += OnSlotIndexChanged; // YENİ: Koltuk değişirse konumu güncelle
 
-        transform.position = new Vector3(OwnerClientId * 2.0f, 1.0f, 0f);
+        if (IsServer)
+        {
+            // Sunucu, yeni gelen oyuncuya RelayManager'dan boş bir koltuk ister
+            slotIndex.Value = RelayManager.Instance.AssignSlot(OwnerClientId);
+        }
+
+        // Oyuncuyu ilk baştaki pozisyonuna (koltuğuna) yerleştir
+        UpdatePosition(slotIndex.Value);
 
         if (IsOwner)
         {
@@ -77,6 +79,7 @@ public class LobbyPlayer : NetworkBehaviour
         playerName.OnValueChanged -= OnPlayerNameChanged;
         isReady.OnValueChanged -= OnPlayerReadyChanged;
         playerColor.OnValueChanged -= OnPlayerColorInternalChanged;
+        slotIndex.OnValueChanged -= OnSlotIndexChanged;
         UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnSceneChanged;
 
         if (RelayManager.Instance != null) RelayManager.Instance.UpdatePlayerListUI();
@@ -85,16 +88,23 @@ public class LobbyPlayer : NetworkBehaviour
     private void OnPlayerNameChanged(FixedString32Bytes oldVal, FixedString32Bytes newVal) => RelayManager.Instance.UpdatePlayerListUI();
     private void OnPlayerReadyChanged(bool oldVal, bool newVal) => RelayManager.Instance.UpdatePlayerListUI();
     private void OnPlayerColorInternalChanged(Color32 oldVal, Color32 newVal) => ApplyColor(newVal);
+    
+    // YENİ: Ağda koltuk verisi geldiğinde oyuncuyu pürüzsüzce o koltuğa ışınla
+    private void OnSlotIndexChanged(int oldVal, int newVal) => UpdatePosition(newVal);
+
+    private void UpdatePosition(int slot)
+    {
+        // 2.5 birim aralıklarla sırayla dizer (İstediğin gibi ayarlayabilirsin)
+        transform.position = new Vector3(slot * 2.5f, 1.0f, 0f);
+    }
 
     private void ApplyColor(Color32 targetColor) 
     { 
-        // Eğer başlangıçta dizi boşsa tekrar kontrol et garantiye al
         if (bodyRenderers == null || bodyRenderers.Length == 0)
         {
             bodyRenderers = GetComponentsInChildren<SkinnedMeshRenderer>();
         }
 
-        // Modelin pelerini, gövdesi, sakalı ne varsa Lit materyalini lobi rengine boyar
         foreach (var renderer in bodyRenderers)
         {
             if (renderer != null)
