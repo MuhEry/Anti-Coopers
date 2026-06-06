@@ -15,7 +15,12 @@ public class LavaRiser : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         startY = transform.position.y;
-        lavaPosY.Value = startY;
+        // Sadece sunucunun bu değişkene değer atamasına izin veriyoruz
+        if (IsServer)
+        {
+            lavaPosY.Value = startY;
+        }
+
         lavaPosY.OnValueChanged += (old, newY) =>
         {
             Vector3 pos = transform.position;
