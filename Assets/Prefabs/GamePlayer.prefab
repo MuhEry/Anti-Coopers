@@ -623,7 +623,7 @@ MonoBehaviour:
   playerLayer:
     serializedVersion: 2
     m_Bits: 64
-  knockbackForce: 20
+  knockbackForce: 10
   punchCooldown: 1.5
   groundCheckPoint: {fileID: 1371746242755234560}
   groundCheckRadius: 0.3

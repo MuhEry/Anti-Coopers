@@ -32,7 +32,6 @@ public class PlayerController : NetworkBehaviour
     private bool isStunned = false;
     private float stunTimer = 0f;
     
-    // AĞ OPTİMİZASYONU İÇİN KRİTİK DEĞİŞKEN
     private bool isRunningLocal = false;    
     
     private float nextPunchTime = 0f; 
@@ -75,8 +74,9 @@ public class PlayerController : NetworkBehaviour
     {
         if (!IsOwner) return;
 
-        // Oyun başlamadıysa hareketi kilitle
-        if (MinigameRaceManager.Instance != null && !MinigameRaceManager.Instance.IsGameStarted)
+        // KUSURSUZ MİMARİ: Artık hangi minigame içinde olduğumuzu umursamıyoruz!
+        // Sadece "Aktif bir oyun var mı?" ve "O oyun başlamadı mı?" diye soruyoruz.
+        if (BaseMinigameManager.ActiveMinigame != null && !BaseMinigameManager.ActiveMinigame.IsGameStarted)
         {
             rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
             
@@ -97,7 +97,10 @@ public class PlayerController : NetworkBehaviour
                 isStunned = false;
                 SetStunStateServerRpc(false);
             }
-            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            if (isGrounded)
+            {
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            }
             return; 
         }
 
@@ -147,7 +150,6 @@ public class PlayerController : NetworkBehaviour
         Vector3 inputDir = new Vector3(moveX, 0f, moveZ);
         bool isMoving = inputDir.magnitude > 0.05f;
 
-        // --- AĞ OPTİMİZASYONU: Sadece durum değiştiğinde sunucuya mesaj at ---
         if (isMoving != isRunningLocal)
         {
             isRunningLocal = isMoving;
@@ -158,7 +160,6 @@ public class PlayerController : NetworkBehaviour
         {
             inputDir.Normalize();
             
-            // Kamerayı çalışma anında garantiye alıyoruz
             if (cameraTransform == null)
             {
                 var tpCam = GetComponent<ThirdPersonCamera>();
@@ -183,10 +184,8 @@ public class PlayerController : NetworkBehaviour
                 moveDir = (cameraForward * inputDir.z + cameraRight * inputDir.x).normalized;
             }
 
-            // Fiziksel İlerleme
             rb.linearVelocity = new Vector3(moveDir.x * moveSpeed, rb.linearVelocity.y, moveDir.z * moveSpeed);
             
-            // Karakterin yönünü dönmesi
             Quaternion targetRotation = Quaternion.LookRotation(moveDir);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 15f);
         }
@@ -271,7 +270,7 @@ public class PlayerController : NetworkBehaviour
             if (targetPlayer != null)
             {
                 Vector3 knockbackDir = (hit.transform.position - transform.position).normalized;
-                knockbackDir.y = 0.3f; 
+                knockbackDir.y = 0.2f; 
                 targetPlayer.TakeHitServerRpc(knockbackDir * knockbackForce);
             }
         }
@@ -285,7 +284,7 @@ public class PlayerController : NetworkBehaviour
 
     [ServerRpc(RequireOwnership = false)]
     public void TakeHitServerRpc(Vector3 force) => TakeHitClientRpc(force);
-
+    
     [ClientRpc]
     private void TakeHitClientRpc(Vector3 force)
     {
@@ -321,6 +320,7 @@ public class PlayerController : NetworkBehaviour
             Gizmos.DrawWireSphere(groundCheckPoint.position, groundCheckRadius);
         }
     }
+
     public void OnMobileJumpPressed()
     {
         if (!IsOwner || isStunned) return;
@@ -340,6 +340,7 @@ public class PlayerController : NetworkBehaviour
             nextPunchTime = Time.time + punchCooldown;
         }
     }
+
     public override void OnNetworkDespawn()
     {
         networkPlayerName.OnValueChanged -= (oldV, newV) => UpdatePlayerVisuals();

@@ -4,7 +4,7 @@ using TMPro;
 using System.Collections;
 using System.Collections.Generic;
 
-public class MinigameRaceManager : NetworkBehaviour
+public class MinigameRaceManager : BaseMinigameManager
 {
     public static MinigameRaceManager Instance { get; private set; }
 
@@ -13,7 +13,7 @@ public class MinigameRaceManager : NetworkBehaviour
     [SerializeField] private TMP_Text timerText;
 
     [Header("Geri Sayım Ayarları")]
-    [SerializeField] private TMP_Text countdownText; // YENİ: Sahneye eklenecek
+    [SerializeField] private TMP_Text countdownText;
 
     [Header("UI Bildirim Ayarları")]
     [SerializeField] private TMP_Text finishedStatusText;
@@ -25,14 +25,15 @@ public class MinigameRaceManager : NetworkBehaviour
     private NetworkVariable<bool> gameStarted = new NetworkVariable<bool>(
         false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    public bool IsGameStarted => gameStarted.Value;
+    public override bool IsGameStarted => gameStarted.Value;
 
     private bool gameEnded = false;
     private int totalPlayers = 0;
     private int finishedCount = 0;
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
     }
@@ -128,9 +129,8 @@ public class MinigameRaceManager : NetworkBehaviour
         {
             finishedStatusText.gameObject.SetActive(true);
             finishedStatusText.text =
-                $"<color=green>✓ BİTİŞ ÇİZGİSİNE ULAŞILDI!</color>\n" +
-                $"<color=yellow>+{score} puan kazandın!</color>\n" +
-                $"Diğer oyuncular bekleniyor...";
+                $"<color=green>BİTİŞ ÇİZGİSİNE ULAŞILDI!</color>\n" +
+                $"<color=yellow>+{score} puan kazandın!</color>\n";
         }
     }
 

@@ -1,3 +1,4 @@
+using System.Collections;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using Unity.Services.Authentication;
@@ -36,48 +37,117 @@ public class RelayManager : MonoBehaviour
     
     private Dictionary<ulong, int> clientSlots = new Dictionary<ulong, int>();
     private bool isGameInProgress = false; 
+    private bool isIntentionallyLeaving = false; // YENİ: Ağ çökmelerini engelleyen mühür
 
     private List<string> gamePlaylist = new List<string>();
     private bool showingScoreboard = false;
     private int currentMapIndex = 0;
     private Dictionary<ulong, int> playerScores = new Dictionary<ulong, int>();
+    private bool isReturningToLobby = false;
 
     private void Awake()
     {
-        if (Instance == null) { Instance = this; DontDestroyOnLoad(gameObject); }
-        else { Destroy(gameObject); }
+        if (Instance != null && Instance != this)
+        {
+            // SİHİRLİ UI TAMİRCİSİ V2: Eski (orijinal) menajeri yaşatıyoruz!
+            // Yeni sahne yüklendiğinde gelen taze Arayüz objelerini, hayatta kalan eski menajere devrediyoruz.
+            Instance.mainMenuPanel = this.mainMenuPanel;
+            Instance.lobbyPanel = this.lobbyPanel;
+            Instance.hostMapSelectionPanel = this.hostMapSelectionPanel;
+            Instance.codeInputField = this.codeInputField;
+            Instance.nicknameInputField = this.nicknameInputField;
+            Instance.lobbyCodeText = this.lobbyCodeText;
+            Instance.playerListText = this.playerListText;
+            Instance.startGameButton = this.startGameButton;
+            Instance.mapDropdown = this.mapDropdown;
+            Instance.playlistText = this.playlistText;
+            Instance.errorText = this.errorText;
+
+            if (Instance.isReturningToLobby)
+            {
+                Instance.ShowLobbyAfterReturn();
+                Instance.isReturningToLobby = false;
+            }
+            else
+            {
+                Instance.ResetUIToMainMenu();
+            }
+            
+            // Yeni doğan içi boş kopyayı yok et ki çakışma olmasın
+            Destroy(gameObject); 
+            return;
+        }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
     async void Start()
     {
-        mainMenuPanel.SetActive(true);
-        lobbyPanel.SetActive(false);
-        hostMapSelectionPanel.SetActive(false);
+        if (Instance == this)
+        {
+            ResetUIToMainMenu();
+
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.ConnectionApprovalCallback = ApprovalCheck;
+                NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnect;
+                NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+            }
+
+            try
+            {
+                if (UnityServices.State == ServicesInitializationState.Uninitialized)
+                {
+                    InitializationOptions options = new InitializationOptions();
+                    LocalProfileName = "Player_" + Random.Range(1000, 9999);
+                    options.SetProfile(LocalProfileName);
+
+                    await UnityServices.InitializeAsync(options);
+                    if (!AuthenticationService.Instance.IsSignedIn)
+                    {
+                        await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                    }
+                }
+            }
+            catch (System.Exception e) { Debug.LogError("Servis hatası: " + e.Message); }
+        }
+    }
+
+    // YENİ: Panelleri güvenle başlangıç konumuna getiren fonksiyon
+    public void ResetUIToMainMenu()
+    {
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
+        if (lobbyPanel != null) lobbyPanel.SetActive(false);
+        if (hostMapSelectionPanel != null) hostMapSelectionPanel.SetActive(false);
         if (startGameButton != null) startGameButton.gameObject.SetActive(false); 
         if (errorText != null) errorText.gameObject.SetActive(false);
+    }
+    private void ShowLobbyAfterReturn()
+    {
+        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+        if (lobbyPanel != null) lobbyPanel.SetActive(true);
 
-        if (NetworkManager.Singleton != null)
+        bool isHost = NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost;
+        if (hostMapSelectionPanel != null) hostMapSelectionPanel.SetActive(isHost);
+
+        if (startGameButton != null)
         {
-            NetworkManager.Singleton.ConnectionApprovalCallback = ApprovalCheck;
-            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnect;
-            
-            // YENİ: Başarılı bağlantı olayını dinliyoruz
-            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+            startGameButton.gameObject.SetActive(isHost);
+            startGameButton.interactable = false;
         }
 
-        try
-        {
-            InitializationOptions options = new InitializationOptions();
-            LocalProfileName = "Player_" + Random.Range(1000, 9999);
-            options.SetProfile(LocalProfileName);
+        // Playlist sıfırla ama bağlantıyı koru
+        currentMapIndex = 0;
+        showingScoreboard = false;
+        isGameInProgress = false;
+        gamePlaylist.Clear();
 
-            await UnityServices.InitializeAsync(options);
-            if (!AuthenticationService.Instance.IsSignedIn)
-            {
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
-            }
-        }
-        catch (System.Exception e) { Debug.LogError("Servis hatası: " + e.Message); }
+        UpdatePlaylistUI();
+        UpdatePlayerListUI();
+
+        if (lobbyCodeText != null)
+            lobbyCodeText.text = "Yeni oyun için harita seçin";
     }
 
     private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
@@ -100,16 +170,13 @@ public class RelayManager : MonoBehaviour
         response.CreatePlayerObject = true;
     }
 
-    // --- YENİ: BAĞLANTI ONAYLANDIĞINDA PANEL GEÇİŞİ YAP ---
     private void OnClientConnected(ulong clientId)
     {
         if (clientId == NetworkManager.Singleton.LocalClientId)
         {
-            // Sadece katılan istemciler (Client) için paneli açıyoruz
-            // Host zaten CreateRelay fonksiyonunda paneli kendi açıyor
             if (!NetworkManager.Singleton.IsHost)
             {
-                HideError(); // "Bağlanılıyor..." yazısını temizle
+                HideError();
                 mainMenuPanel.SetActive(false);
                 lobbyPanel.SetActive(true);
                 hostMapSelectionPanel.SetActive(false);
@@ -140,20 +207,24 @@ public class RelayManager : MonoBehaviour
 
     private void OnClientDisconnect(ulong clientId)
     {
-        if (NetworkManager.Singleton.IsServer && clientSlots.ContainsKey(clientId))
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && clientSlots.ContainsKey(clientId))
         {
             clientSlots.Remove(clientId);
         }
 
-        if (clientId == NetworkManager.Singleton.LocalClientId)
+        if (NetworkManager.Singleton != null && clientId == NetworkManager.Singleton.LocalClientId)
         {
-            string reason = NetworkManager.Singleton.DisconnectReason;
-            if (string.IsNullOrEmpty(reason))
+            // DÜZELTME: Eğer bilerek çıkıyorsak (oyun bittiyse vs.) boşuna hata mesajı döngüsüne girme!
+            if (!isIntentionallyLeaving)
             {
-                reason = "Odaya bağlanılamadı. Oda kapanmış veya kod geçersiz.";
+                string reason = NetworkManager.Singleton.DisconnectReason;
+                if (string.IsNullOrEmpty(reason))
+                {
+                    reason = "Odaya bağlanılamadı. Oda kapanmış veya kod geçersiz.";
+                }
+                ShowError(reason);
+                LeaveLobby();
             }
-            ShowError(reason);
-            LeaveLobby();
         }
         else
         {
@@ -166,7 +237,7 @@ public class RelayManager : MonoBehaviour
         if (errorText != null)
         {
             errorText.gameObject.SetActive(true);
-            errorText.text = $"</color> {message}";
+            errorText.text = $"<color=red>BİLGİ:</color> {message}";
             CancelInvoke(nameof(HideError));
             Invoke(nameof(HideError), 4f); 
         }
@@ -189,12 +260,14 @@ public class RelayManager : MonoBehaviour
     {
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
+            isIntentionallyLeaving = true; // Kapatırken kaza yaşanmasını engeller
             NetworkManager.Singleton.Shutdown();
             while (NetworkManager.Singleton.IsListening)
             {
                 await Task.Delay(50); 
             }
             await Task.Delay(200);
+            isIntentionallyLeaving = false;
         }
     }
 
@@ -225,10 +298,10 @@ public class RelayManager : MonoBehaviour
                 NetworkManager.Singleton.StartHost();
                 NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadCompleted;
 
-                lobbyCodeText.text = "ODA KODU: " + joinCode;
-                mainMenuPanel.SetActive(false);
-                lobbyPanel.SetActive(true);
-                hostMapSelectionPanel.SetActive(true);
+                if (lobbyCodeText != null) lobbyCodeText.text = "ODA KODU: " + joinCode;
+                if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
+                if (lobbyPanel != null) lobbyPanel.SetActive(true);
+                if (hostMapSelectionPanel != null) hostMapSelectionPanel.SetActive(true);
                 
                 if (startGameButton != null)
                 {
@@ -248,11 +321,12 @@ public class RelayManager : MonoBehaviour
 
         try
         {
+            if (codeInputField == null) return;
             string joinCode = codeInputField.text; 
             
             if (string.IsNullOrWhiteSpace(joinCode))
             {
-                ShowError("Geçersiz kod");
+                ShowError("Geçersiz kod! Oda bulunamadı veya kod girmediniz.");
                 return;
             }
 
@@ -270,21 +344,20 @@ public class RelayManager : MonoBehaviour
                     joinAllocation.HostConnectionData
                 );
                 
-                // DÜZELTİLDİ: UI panellerini buradan kaldırdık. Sadece istek atıp bekliyoruz.
                 ShowError("Odaya bağlanılıyor, lütfen bekleyin...");
                 NetworkManager.Singleton.StartClient();
-                lobbyCodeText.text = "ODA KODU: " + joinCode;
+                if (lobbyCodeText != null) lobbyCodeText.text = "ODA KODU: " + joinCode;
             }
         }
         catch (System.Exception) 
         { 
-            ShowError("Geçersiz kod"); 
+            ShowError("Geçersiz kod! Oda bulunamadı veya internet bağlantınız koptu."); 
         }
     }
 
     public void UpdatePlayerListUI()
     {
-        if (playerListText == null || !lobbyPanel.activeInHierarchy) return;
+        if (playerListText == null || lobbyPanel == null || !lobbyPanel.activeInHierarchy) return;
 
         LobbyPlayer[] players = FindObjectsByType<LobbyPlayer>(FindObjectsSortMode.None);
         bool allReady = true;
@@ -410,12 +483,29 @@ public class RelayManager : MonoBehaviour
             }
             else
             {
-                Debug.Log("TÜM PLAYLIST BİTTİ!");
-                LeaveLobby(); 
+                Debug.Log("TÜM PLAYLIST BİTTİ! Skorları incelemek için bekleniyor...");
+                StartCoroutine(DelayedReturnToLobby(12f));
             }
         }
     }
 
+    private IEnumerator DelayedReturnToLobby(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        LeaveLobby();
+    }
+    /*public void ReturnToLobby()
+    {
+        if (!NetworkManager.Singleton.IsHost) return;
+
+        isReturningToLobby = true;
+
+        // Tüm clientlar bu scene load'u takip eder, bağlantı kopmaz
+        NetworkManager.Singleton.SceneManager.LoadScene(
+            "MainMenu",
+            UnityEngine.SceneManagement.LoadSceneMode.Single
+        );
+    }*/
     private void OnSceneLoadCompleted(string sceneName, UnityEngine.SceneManagement.LoadSceneMode loadMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
     {
         if (sceneName.StartsWith("MiniGame_") || sceneName == "GameScene")
@@ -443,12 +533,27 @@ public class RelayManager : MonoBehaviour
 
     public void LeaveLobby()
     {
-        if (NetworkManager.Singleton != null) NetworkManager.Singleton.Shutdown();
+        isIntentionallyLeaving = true; // Mühürle: Ağ kapanırken gereksiz hatalar basmasın
+
+        if (NetworkManager.Singleton != null) 
+        {
+            NetworkManager.Singleton.Shutdown();
+        }
+
         isGameInProgress = false;
         gamePlaylist.Clear();
         playerScores.Clear(); 
         clientSlots.Clear(); 
-        lobbyPanel.SetActive(false);
-        mainMenuPanel.SetActive(true);
+        
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "MainMenu")
+        {
+            ResetUIToMainMenu();
+            isIntentionallyLeaving = false; // Temizlik bitti mührü kaldır
+        }
+        else
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+            isIntentionallyLeaving = false;
+        }
     }
 }

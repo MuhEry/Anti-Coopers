@@ -4,7 +4,7 @@ using TMPro;
 using System.Collections;
 using System.Collections.Generic;
 
-public class MinigameSurvivalManager : NetworkBehaviour
+public class MinigameSurvivalManager : BaseMinigameManager
 {
     public static MinigameSurvivalManager Instance { get; private set; }
 
@@ -24,15 +24,16 @@ public class MinigameSurvivalManager : NetworkBehaviour
     private NetworkVariable<bool> gameStarted = new NetworkVariable<bool>(
         false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    public bool IsGameStarted => gameStarted.Value;
+    public override bool IsGameStarted => gameStarted.Value;
 
     private bool gameEnded = false;
     private int totalPlayers = 0;
     private int eliminatedCount = 0;
     private HashSet<ulong> eliminatedPlayers = new HashSet<ulong>();
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
     }
@@ -121,7 +122,7 @@ public class MinigameSurvivalManager : NetworkBehaviour
             {
                 statusText.gameObject.SetActive(true);
                 statusText.text =
-                    $"<color=red>✗ ELENDİN!</color>\n" +
+                    $"<color=red>ELENDİN!</color>\n" +
                     $"<color=yellow>+{score} puan</color>  (Hayatta kalma: {score}s)";
             }
         }
@@ -132,31 +133,7 @@ public class MinigameSurvivalManager : NetworkBehaviour
         if (!IsServer || gameEnded) return;
         gameEnded = true;
 
-        // Hayatta kalan oyunculara puan ver
-        foreach (var clientId in NetworkManager.Singleton.ConnectedClients.Keys)
-        {
-            if (!eliminatedPlayers.Contains(clientId))
-            {
-                int bonusScore = Mathf.FloorToInt(timeElapsed.Value) + 50;
-                RelayManager.Instance.AddScore(clientId, bonusScore);
-                NotifySurvivedClientRpc(clientId, bonusScore);
-            }
-        }
-
         StartCoroutine(DelayedEnd());
-    }
-
-    [ClientRpc]
-    private void NotifySurvivedClientRpc(ulong survivorId, int score)
-    {
-        if (NetworkManager.Singleton.LocalClientId != survivorId) return;
-        if (statusText != null)
-        {
-            statusText.gameObject.SetActive(true);
-            statusText.text =
-                $"<color=green>✓ HAYATTA KALDIN!</color>\n" +
-                $"<color=yellow>+{score} puan</color>  (+50 hayatta kalma bonusu)";
-        }
     }
 
     [ClientRpc]
