@@ -126,7 +126,7 @@ public class MinigameParkourManager : BaseMinigameManager
             if (statusText != null)
             {
                 statusText.gameObject.SetActive(true);
-                statusText.text = $"<color=yellow>+{scoreAmount}+10 PUAN";
+                statusText.text = $"<color=yellow>+{scoreAmount} PUAN";
                 
                 // 2 saniye sonra yazıyı ekrandan sil
                 CancelInvoke(nameof(HideStatusText));
