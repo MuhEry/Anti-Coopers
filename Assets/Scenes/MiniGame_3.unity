@@ -2163,8 +2163,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 3.8, y: 0, z: 0}
-  speed: 1
-  useSmoothMovement: 1
+  speed: 1.3
+  useSmoothMovement: 0
 --- !u!114 &605064292
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6568,7 +6568,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 0, y: 3, z: 0}
-  speed: 0.7
+  speed: 0.8
   useSmoothMovement: 1
 --- !u!54 &1619376836
 Rigidbody:
@@ -6771,7 +6771,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 5, y: 0, z: 0}
   speed: 1.5
-  useSmoothMovement: 1
+  useSmoothMovement: 0
 --- !u!114 &1718784614
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7574,7 +7574,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 0, y: 2.5, z: 0}
-  speed: 0.7
+  speed: 0.8
   useSmoothMovement: 1
 --- !u!54 &1879608730
 Rigidbody:
@@ -8415,8 +8415,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 3.8, y: 0, z: 0}
-  speed: 0.7
-  useSmoothMovement: 1
+  speed: 1
+  useSmoothMovement: 0
 --- !u!54 &2029412420
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -8540,7 +8540,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 5, y: 0, z: 0}
-  speed: 1
+  speed: 1.2
   useSmoothMovement: 1
 --- !u!54 &2055286400
 Rigidbody:
