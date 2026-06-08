@@ -269,6 +269,9 @@ public class PlayerController : NetworkBehaviour
             PlayerController targetPlayer = hit.GetComponent<PlayerController>();
             if (targetPlayer != null)
             {
+                if (BaseMinigameManager.ActiveMinigame != null) 
+                    BaseMinigameManager.ActiveMinigame.OnPlayerHit(OwnerClientId, targetPlayer.OwnerClientId);
+                    
                 Vector3 knockbackDir = (hit.transform.position - transform.position).normalized;
                 knockbackDir.y = 0.2f; 
                 targetPlayer.TakeHitServerRpc(knockbackDir * knockbackForce);
