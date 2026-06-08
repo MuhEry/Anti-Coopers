@@ -9,6 +9,9 @@ EditorBuildSettings:
     path: Assets/Scenes/MainMenu.unity
     guid: 6e82187ec143b0741816ab3f31186927
   - enabled: 1
+    path: Assets/Scenes/ScoreboardScene.unity
+    guid: 8c00825690fb74642a7e8c08139de31e
+  - enabled: 1
     path: Assets/Scenes/MiniGame_1.unity
     guid: 2a989c1a1e0d6bb409462a33f010fdd7
   - enabled: 1
@@ -18,8 +21,8 @@ EditorBuildSettings:
     path: Assets/Scenes/MiniGame_3.unity
     guid: 844a7bacc9ed4354286e46293a082e46
   - enabled: 1
-    path: Assets/Scenes/ScoreboardScene.unity
-    guid: 8c00825690fb74642a7e8c08139de31e
+    path: Assets/Scenes/MiniGame_4.unity
+    guid: ad8c81451b6647a449d1e7555c2ddb25
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
