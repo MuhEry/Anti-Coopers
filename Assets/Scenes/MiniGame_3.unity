@@ -2281,15 +2281,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4809183433297085925, guid: 38d257c588f863747bd31ff57651e099, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 9.125842
+      value: 8.81
       objectReference: {fileID: 0}
     - target: {fileID: 4809183433297085925, guid: 38d257c588f863747bd31ff57651e099, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.47
+      value: -0.44
       objectReference: {fileID: 0}
     - target: {fileID: 4809183433297085925, guid: 38d257c588f863747bd31ff57651e099, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 30.41
+      value: 30.61
       objectReference: {fileID: 0}
     - target: {fileID: 4809183433297085925, guid: 38d257c588f863747bd31ff57651e099, type: 3}
       propertyPath: m_LocalRotation.w
@@ -2855,7 +2855,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7150001871963719969, guid: 1bb7c04abb892e54e86a1e9b09a244a9, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.062426325
+      value: -0.02
       objectReference: {fileID: 0}
     - target: {fileID: 7150001871963719969, guid: 1bb7c04abb892e54e86a1e9b09a244a9, type: 3}
       propertyPath: m_LocalPosition.z
@@ -3171,7 +3171,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 3.8, y: 0, z: 0}
-  speed: 1.3
+  speed: 1.2
   useSmoothMovement: 0
 --- !u!114 &605064292
 MonoBehaviour:
@@ -4044,7 +4044,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4062619256373206, guid: a2e435ea5b0f606429670d1f3f1f1504, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 4062619256373206, guid: a2e435ea5b0f606429670d1f3f1f1504, type: 3}
       propertyPath: m_LocalScale.y
@@ -4749,7 +4749,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4062619256373206, guid: a2e435ea5b0f606429670d1f3f1f1504, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 4062619256373206, guid: a2e435ea5b0f606429670d1f3f1f1504, type: 3}
       propertyPath: m_LocalScale.y
@@ -7705,7 +7705,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4063223197671162, guid: e484c7ad7b1274b4c847940d3eb54d14, type: 3}
       propertyPath: m_LocalScale.z
-      value: 2.5
+      value: 1.544475
       objectReference: {fileID: 0}
     - target: {fileID: 4063223197671162, guid: e484c7ad7b1274b4c847940d3eb54d14, type: 3}
       propertyPath: m_LocalPosition.x
@@ -7717,7 +7717,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4063223197671162, guid: e484c7ad7b1274b4c847940d3eb54d14, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 27.7
+      value: 33.96
       objectReference: {fileID: 0}
     - target: {fileID: 4063223197671162, guid: e484c7ad7b1274b4c847940d3eb54d14, type: 3}
       propertyPath: m_LocalRotation.w
@@ -11009,7 +11009,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 3.8, y: 0, z: 0}
-  speed: 1
+  speed: 0.9
   useSmoothMovement: 0
 --- !u!54 &2029412420
 Rigidbody:
