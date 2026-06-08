@@ -11,4 +11,6 @@ public class UIButtonRelay : MonoBehaviour
     public void LeaveLobby()   => RelayManager.Instance?.LeaveLobby();
     public void AddMapToPlaylist()  => RelayManager.Instance?.AddMapToPlaylist();
     public void ClearPlaylist() => RelayManager.Instance?.ClearPlaylist();
+
+    public void ChangeMyColor(string colorHex) => RelayManager.Instance?.ChangeMyColor(colorHex);
 }

@@ -9,6 +9,7 @@ using UnityEngine;
 using TMPro;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Unity.Networking.Transport.Relay;
 
 public class RelayManager : MonoBehaviour
 {
@@ -282,15 +283,18 @@ public class RelayManager : MonoBehaviour
             string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
             UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
             
+            
             if (transport != null)
             {
-                transport.SetRelayServerData(
-                    allocation.RelayServer.IpV4,
-                    (ushort)allocation.RelayServer.Port,
-                    allocation.AllocationIdBytes,
-                    allocation.Key,
-                    allocation.ConnectionData
-                );
+                // DÜZELTME: Hangi platformdaysak ona uygun bağlantı tipini seçiyoruz
+                string connectionType = "dtls";
+#if UNITY_WEBGL
+                transport.UseWebSockets = true;
+                connectionType = "wss";
+#endif
+                // Yeni nesil Relay tanımlaması (Doğru portları otomatik ayarlar)
+                RelayServerData relayServerData = new RelayServerData(allocation, connectionType);
+                transport.SetRelayServerData(relayServerData);
                 
                 isGameInProgress = false; 
                 clientSlots.Clear(); 
@@ -326,7 +330,7 @@ public class RelayManager : MonoBehaviour
             
             if (string.IsNullOrWhiteSpace(joinCode))
             {
-                ShowError("Geçersiz kod! Oda bulunamadı veya kod girmediniz.");
+                ShowError("Geçersiz kod!");
                 return;
             }
 
@@ -335,14 +339,14 @@ public class RelayManager : MonoBehaviour
             
             if (transport != null)
             {
-                transport.SetRelayServerData(
-                    joinAllocation.RelayServer.IpV4,
-                    (ushort)joinAllocation.RelayServer.Port,
-                    joinAllocation.AllocationIdBytes,
-                    joinAllocation.Key,
-                    joinAllocation.ConnectionData,
-                    joinAllocation.HostConnectionData
-                );
+                // DÜZELTME: Katılan kişi için de doğru bağlantı tipini ayarlıyoruz
+                string connectionType = "dtls";
+#if UNITY_WEBGL
+                transport.UseWebSockets = true;
+                connectionType = "wss";
+#endif
+                RelayServerData relayServerData = new RelayServerData(joinAllocation, connectionType);
+                transport.SetRelayServerData(relayServerData);
                 
                 ShowError("Odaya bağlanılıyor, lütfen bekleyin...");
                 NetworkManager.Singleton.StartClient();
