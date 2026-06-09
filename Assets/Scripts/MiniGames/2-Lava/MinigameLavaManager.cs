@@ -4,25 +4,28 @@ using TMPro;
 using System.Collections;
 using System.Collections.Generic;
 
-public class MinigameKnockoutManager : BaseMinigameManager
+public class MinigameLavaManager : BaseMinigameManager
 {
-    public static MinigameKnockoutManager Instance { get; private set; }
+    public static MinigameLavaManager Instance { get; private set; }
 
     [Header("Oyun Ayarları")]
-    [SerializeField] private float gameDuration = 50f;
+    [SerializeField] private float gameDuration = 60f; // Haritaya göre editörden değiştirebilirsin
     [SerializeField] private TMP_Text timerText;
 
     [Header("Geri Sayım & UI")]
     [SerializeField] private TMP_Text countdownText;
     [SerializeField] private TMP_Text statusText;
 
+    [Header("Garantili İzleyici Kamerası")]
+    [Tooltip("Sahnedeki Spectator Camera objesini doğrudan buraya sürükleyin")]
+    [SerializeField] private GameObject spectatorCamera;
+
     private NetworkVariable<float> timeRemaining = new NetworkVariable<float>(
-        50f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+        60f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     private NetworkVariable<bool> gameStarted = new NetworkVariable<bool>(
         false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    // Yeni mimarimizdeki mecburi kural:
     public override bool IsGameStarted => gameStarted.Value;
 
     private bool gameEnded = false;
@@ -30,7 +33,7 @@ public class MinigameKnockoutManager : BaseMinigameManager
 
     protected override void Awake()
     {
-        base.Awake(); // Ana menajere "Aktif oyun benim" diyoruz
+        base.Awake();
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
     }
@@ -41,7 +44,7 @@ public class MinigameKnockoutManager : BaseMinigameManager
         {
             timeRemaining.Value = gameDuration;
             
-            // Oyuna katılan herkesi "Hayatta" listesine ekle
+            // Odadaki herkesi hayatta olarak listeye ekle
             foreach (var clientId in NetworkManager.Singleton.ConnectedClients.Keys)
             {
                 alivePlayers.Add(clientId);
@@ -54,6 +57,9 @@ public class MinigameKnockoutManager : BaseMinigameManager
 
         if (statusText != null) statusText.gameObject.SetActive(false);
         if (countdownText != null) countdownText.gameObject.SetActive(false);
+
+        // Oyun başlarken izleyici kamerasını zorla kapalı tutalım
+        if (spectatorCamera != null) spectatorCamera.SetActive(false);
     }
 
     private IEnumerator StartCountdown()
@@ -66,7 +72,7 @@ public class MinigameKnockoutManager : BaseMinigameManager
             yield return new WaitForSeconds(1f);
         }
 
-        ShowCountdownClientRpc("DÜŞÜR ONLARI!", true);
+        ShowCountdownClientRpc("HAYATTA KAL!", true);
         yield return new WaitForSeconds(0.8f);
         HideCountdownClientRpc();
         
@@ -82,7 +88,7 @@ public class MinigameKnockoutManager : BaseMinigameManager
             timeRemaining.Value = Mathf.Max(0, timeRemaining.Value - 1f);
         }
         
-        // Süre bittiyse (50 saniye dolduysa) oyunu bitir (Lav yükselecek)
+        // Süre dolduğunda hala birden fazla kişi hayattaysa herkesi bitir
         if (!gameEnded) EndGame(false);
     }
 
@@ -92,8 +98,7 @@ public class MinigameKnockoutManager : BaseMinigameManager
             timerText.text = $"SÜRE: {Mathf.CeilToInt(newVal)}s";
     }
 
-    // Lav tetikleyicisi bu fonksiyonu çağırır
-    public void PlayerEliminated(ulong clientId)
+    public override void PlayerEliminated(ulong clientId)
     {
         if (!IsServer || gameEnded) return;
         if (!alivePlayers.Contains(clientId)) return;
@@ -104,37 +109,12 @@ public class MinigameKnockoutManager : BaseMinigameManager
         int score = Mathf.FloorToInt(gameDuration - timeRemaining.Value);
         RelayManager.Instance.AddScore(clientId, score);
         
-        ShowEliminatedUIClientRpc(clientId, score);
+        EliminatePlayerClientRpc(clientId, score);
 
-        // Sadece 1 kişi kaldıysa oyunu "Kazanan Var" şeklinde bitir
+        // Geriye sadece 1 kişi kaldıysa oyunu bitir
         if (alivePlayers.Count <= 1)
         {
             EndGame(true);
-        }
-    }
-
-    [ClientRpc]
-    private void ShowEliminatedUIClientRpc(ulong eliminatedId, int score)
-    {
-        // Eğer elenen kişi "BİZ" isek, bizim ekranımızda çalışır
-        if (NetworkManager.Singleton.LocalClientId == eliminatedId)
-        {
-            if (statusText != null)
-            {
-                statusText.gameObject.SetActive(true);
-                statusText.text = $"<color=red>ELENDİN!</color>\n<size=40>+{score} Puan</size>";
-            }
-
-            // 1. Bizim peşimizde koşan Cinemachine kamerasını kapat
-            var vCam = FindFirstObjectByType<Unity.Cinemachine.CinemachineCamera>();
-            if (vCam != null) vCam.gameObject.SetActive(false);
-
-            // 2. Sahnedeki sabit İzleyici Kamerasını bul ve aç
-            GameObject specCam = GameObject.Find("SpectatorCamera");
-            if (specCam != null)
-            {
-                specCam.GetComponent<Camera>().enabled = true;
-            }
         }
     }
 
@@ -142,30 +122,68 @@ public class MinigameKnockoutManager : BaseMinigameManager
     {
         if (!IsServer || gameEnded) return;
         gameEnded = true;
-        gameStarted.Value = false; // Hareketi kilitler
+        gameStarted.Value = false;
 
         if (hasWinner && alivePlayers.Count == 1)
         {
-            // Son kalanı bul ve ona +50 Bonus puan çak!
-            ulong winnerId = 0;
+            // Son kalanı bul ve ona toplam süre (Maksimum) kadar puan ver!
+            ulong winnerId = 99999;
             foreach (var id in alivePlayers) winnerId = id;
 
-            RelayManager.Instance.AddScore(winnerId, 50);
-            ShowWinnerUIClientRpc(winnerId);
+            int maxScore = Mathf.FloorToInt(gameDuration);
+            RelayManager.Instance.AddScore(winnerId, maxScore);
+            ShowWinnerUIClientRpc(winnerId, maxScore);
         }
 
         StartCoroutine(DelayedEnd());
     }
 
     [ClientRpc]
-    private void ShowWinnerUIClientRpc(ulong winnerId)
+    private void EliminatePlayerClientRpc(ulong eliminatedId, int score)
+    {
+        // Elenen kişi "BİZ" isek
+        if (NetworkManager.Singleton.LocalClientId == eliminatedId)
+        {
+            // 1. Karakteri dondur
+            var playerObj = NetworkManager.Singleton.LocalClient?.PlayerObject;
+            if (playerObj != null)
+            {
+                var pc = playerObj.GetComponent<PlayerController>();
+                if (pc != null) pc.enabled = false;
+            }
+
+            // 2. UI Bildirimi
+            if (statusText != null)
+            {
+                statusText.gameObject.SetActive(true);
+                statusText.text = $"<color=red>ELENDİN!</color>\n<size=40>+{score} Puan</size>";
+            }
+
+            // 3. KAMERA GARANTİSİ: İsimle aramak yerine sahnede çalışan tüm oyuncu kameralarını zorla kapatıyoruz
+            var vCams = FindObjectsByType<Unity.Cinemachine.CinemachineCamera>(FindObjectsSortMode.None);
+            foreach (var vCam in vCams) vCam.gameObject.SetActive(false);
+
+            if (Camera.main != null) Camera.main.gameObject.SetActive(false);
+
+            // 4. Editörden bağladığımız İzleyici Kamerasını açıyoruz (Asla şaşmaz)
+            if (Instance.spectatorCamera != null)
+            {
+                Instance.spectatorCamera.SetActive(true);
+                var specCamComp = Instance.spectatorCamera.GetComponent<Camera>();
+                if (specCamComp != null) specCamComp.enabled = true;
+            }
+        }
+    }
+
+    [ClientRpc]
+    private void ShowWinnerUIClientRpc(ulong winnerId, int maxScore)
     {
         if (NetworkManager.Singleton.LocalClientId == winnerId)
         {
             if (statusText != null)
             {
                 statusText.gameObject.SetActive(true);
-                statusText.text = $"<color=yellow>SON KALAN SENSİN!</color>\n<size=40>+50 KAZANAN BONUSU</size>";
+                statusText.text = $"<color=yellow>SON KALAN SENSİN!</color>\n<size=40>+{maxScore} MAKSİMUM PUAN</size>";
             }
         }
     }
@@ -175,9 +193,7 @@ public class MinigameKnockoutManager : BaseMinigameManager
     {
         if (countdownText == null) return;
         countdownText.gameObject.SetActive(true);
-        countdownText.text = isGo
-            ? $"<color=red><b>{text}</b></color>"
-            : $"<color=white><b>{text}</b></color>";
+        countdownText.text = isGo ? $"<color=red><b>{text}</b></color>" : $"<color=white><b>{text}</b></color>";
     }
 
     [ClientRpc]

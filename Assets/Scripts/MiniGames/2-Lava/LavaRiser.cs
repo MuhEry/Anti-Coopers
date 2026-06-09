@@ -32,8 +32,8 @@ public class LavaRiser : NetworkBehaviour
     private void Update()
     {
         if (!IsServer) return;
-        if (MinigameSurvivalManager.Instance == null) return;
-        if (!MinigameSurvivalManager.Instance.IsGameStarted) return;
+        if (MinigameLavaManager.Instance == null) return;
+        if (!MinigameLavaManager.Instance.IsGameStarted) return;
 
         if (lavaPosY.Value < startY + maxHeight)
             lavaPosY.Value += riseSpeed * Time.deltaTime;
@@ -46,6 +46,6 @@ public class LavaRiser : NetworkBehaviour
 
         NetworkObject netObj = other.GetComponent<NetworkObject>();
         if (netObj != null)
-            MinigameSurvivalManager.Instance?.PlayerEliminated(netObj.OwnerClientId);
+            MinigameLavaManager.Instance?.PlayerEliminated(netObj.OwnerClientId);
     }
 }

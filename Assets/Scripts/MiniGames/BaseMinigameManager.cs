@@ -12,4 +12,6 @@ public abstract class BaseMinigameManager : NetworkBehaviour
 
     // YENİ: Yumruk atıldığında çalışacak ortak fonksiyon
     public virtual void OnPlayerHit(ulong attackerId, ulong victimId) { }
+
+    public virtual void PlayerEliminated(ulong clientId) { }
 }
