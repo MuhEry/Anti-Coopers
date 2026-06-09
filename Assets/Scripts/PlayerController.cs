@@ -37,6 +37,8 @@ public class PlayerController : NetworkBehaviour
     private float nextPunchTime = 0f; 
     private bool isGrounded = true;   
     private Transform cameraTransform;
+    private float nextJumpTime = 0f;
+    private float jumpCooldown = 0.25f; // Zıplama aralığı (Uzaya fırlamayı engeller)
 
     private void Start()
     {
@@ -123,10 +125,11 @@ public class PlayerController : NetworkBehaviour
             if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) moveX = -1f;
             if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) moveX = 1f;
 
-            if (keyboard.spaceKey.wasPressedThisFrame && isGrounded)
+            if (keyboard.spaceKey.isPressed && isGrounded && Time.time >= nextJumpTime)
             {
                 rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
                 SetJumpTriggerServerRpc();
+                nextJumpTime = Time.time + jumpCooldown;
             }
         }
 
@@ -140,10 +143,11 @@ public class PlayerController : NetworkBehaviour
                 moveZ = stickInput.y;
             }
 
-            if (UnityEngine.InputSystem.Gamepad.current.buttonSouth.wasPressedThisFrame && isGrounded)
+            if (UnityEngine.InputSystem.Gamepad.current.buttonSouth.isPressed && isGrounded && Time.time >= nextJumpTime)
             {
                 rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
                 SetJumpTriggerServerRpc();
+                nextJumpTime = Time.time + jumpCooldown;
             }
         }
 
@@ -331,6 +335,18 @@ public class PlayerController : NetworkBehaviour
         {
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
             SetJumpTriggerServerRpc();
+        }
+    }
+    public void OnMobileJumpHeld()
+    {
+        if (!IsOwner || isStunned) return;
+        
+        // Zıplama süresi dolmuşsa ve yere değiyorsak zıpla
+        if (isGrounded && Time.time >= nextJumpTime)
+        {
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
+            SetJumpTriggerServerRpc();
+            nextJumpTime = Time.time + jumpCooldown;
         }
     }
 

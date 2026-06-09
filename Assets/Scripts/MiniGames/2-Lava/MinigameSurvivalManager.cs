@@ -125,6 +125,12 @@ public class MinigameSurvivalManager : BaseMinigameManager
                     $"<color=red>ELENDİN!</color>\n" +
                     $"<color=yellow>+{score} puan</color>  (Hayatta kalma: {score}s)";
             }
+            // --- YENİ EKLENEN KISIM: KAMERA DEĞİŞİMİ ---
+            var vCam = FindFirstObjectByType<Unity.Cinemachine.CinemachineCamera>();
+            if (vCam != null) vCam.gameObject.SetActive(false);
+
+            GameObject specCam = GameObject.Find("SpectatorCamera");
+            if (specCam != null) specCam.GetComponent<Camera>().enabled = true;
         }
     }
 

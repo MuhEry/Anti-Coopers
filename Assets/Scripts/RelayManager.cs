@@ -85,6 +85,12 @@ public class RelayManager : MonoBehaviour
 
     async void Start()
     {
+        // Oyun çalışırken telefon ekranının kararmasını ve uykuya geçmesini engeller
+        Screen.sleepTimeout = SleepTimeout.NeverSleep;
+        
+        // Oyun arka plana atılsa bile (kısa süreliğine) çalışmaya devam etmesini söyler
+        Application.runInBackground = true;
+        
         if (Instance == this)
         {
             ResetUIToMainMenu();

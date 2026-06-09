@@ -116,12 +116,24 @@ public class MinigameKnockoutManager : BaseMinigameManager
     [ClientRpc]
     private void ShowEliminatedUIClientRpc(ulong eliminatedId, int score)
     {
+        // Eğer elenen kişi "BİZ" isek, bizim ekranımızda çalışır
         if (NetworkManager.Singleton.LocalClientId == eliminatedId)
         {
             if (statusText != null)
             {
                 statusText.gameObject.SetActive(true);
                 statusText.text = $"<color=red>ELENDİN!</color>\n<size=40>+{score} Puan</size>";
+            }
+
+            // 1. Bizim peşimizde koşan Cinemachine kamerasını kapat
+            var vCam = FindFirstObjectByType<Unity.Cinemachine.CinemachineCamera>();
+            if (vCam != null) vCam.gameObject.SetActive(false);
+
+            // 2. Sahnedeki sabit İzleyici Kamerasını bul ve aç
+            GameObject specCam = GameObject.Find("SpectatorCamera");
+            if (specCam != null)
+            {
+                specCam.GetComponent<Camera>().enabled = true;
             }
         }
     }

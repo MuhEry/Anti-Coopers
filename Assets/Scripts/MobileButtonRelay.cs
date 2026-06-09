@@ -3,22 +3,27 @@ using UnityEngine;
 
 public class MobileButtonRelay : MonoBehaviour
 {
-    // Mobil Zıplama Butonuna atanacak fonksiyon
-    public void ExecuteJump()
+    private bool isJumpHeld = false;
+
+    // Ekrana DOKUNULDUĞU AN çalışır
+    public void PointerDownJump() => isJumpHeld = true;
+
+    // Ekrandan PARMAK ÇEKİLDİĞİ AN çalışır
+    public void PointerUpJump() => isJumpHeld = false;
+
+    private void Update()
     {
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.LocalClient != null)
+        // Basılı tutulduğu sürece oyuncuya zıplama emri gönder (Yere değer değmez zıplayacak)
+        if (isJumpHeld && NetworkManager.Singleton != null && NetworkManager.Singleton.LocalClient != null)
         {
-            // Ağdaki taptaze doğmuş olan YEREL OYUNCU objesini bulur
             var playerObj = NetworkManager.Singleton.LocalClient.PlayerObject;
             if (playerObj != null)
             {
-                // Karaktere zıplama emrini gönderir
-                playerObj.GetComponent<PlayerController>().OnMobileJumpPressed();
+                playerObj.GetComponent<PlayerController>().OnMobileJumpHeld();
             }
         }
     }
 
-    // Mobil Yumruk Butonuna atanacak fonksiyon
     public void ExecutePunch()
     {
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.LocalClient != null)
@@ -26,7 +31,6 @@ public class MobileButtonRelay : MonoBehaviour
             var playerObj = NetworkManager.Singleton.LocalClient.PlayerObject;
             if (playerObj != null)
             {
-                // Karaktere yumruk emrini gönderir
                 playerObj.GetComponent<PlayerController>().OnMobilePunchPressed();
             }
         }
