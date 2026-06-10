@@ -112,10 +112,10 @@ public class MinigameLavaManager : BaseMinigameManager
         EliminatePlayerClientRpc(clientId, score);
 
         // Geriye sadece 1 kişi kaldıysa oyunu bitir
-        /*if (alivePlayers.Count <= 1)
+        if (alivePlayers.Count <= 1)
         {
             EndGame(true);
-        }*/
+        }
     }
 
     private void EndGame(bool hasWinner)

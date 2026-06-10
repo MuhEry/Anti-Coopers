@@ -33,6 +33,9 @@ public class RelayManager : MonoBehaviour
     [Header("Oyun İçi Doğum Ayarları")]
     [SerializeField] private GameObject gamePlayerPrefab; 
 
+    public int GetCurrentMapIndex() => currentMapIndex;
+    public int GetPlaylistCount() => gamePlaylist.Count;
+
     [HideInInspector] public string LocalProfileName;
     private Dictionary<ulong, (string name, Color32 color)> savedPlayerData = new Dictionary<ulong, (string, Color32)>();
     
