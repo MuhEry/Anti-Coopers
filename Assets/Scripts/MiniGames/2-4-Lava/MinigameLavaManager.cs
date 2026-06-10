@@ -187,7 +187,7 @@ public class MinigameLavaManager : BaseMinigameManager
             if (statusText != null)
             {
                 statusText.gameObject.SetActive(true);
-                statusText.text = $"<color=yellow>SON KALAN SENSİN!</color>\n<size=40>+{maxScore} MAKSİMUM PUAN</size>";
+                statusText.text = $"<color=yellow>SON KALAN SENSİN!</color>\n<size=40>+{maxScore} PUAN</size>";
             }
         }
     }
