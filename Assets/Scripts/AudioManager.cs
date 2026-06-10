@@ -14,7 +14,8 @@ public class AudioManager : MonoBehaviour
     public AudioClip[] gameMusics; // TEKİL YERİNE DİZİ (ARRAY) YAPTIK!
 
     [Header("Ses Efektleri (SFX)")]
-    public AudioClip punchSound;
+    public AudioClip punchHitSound;  // DEĞİŞTİ: Oturaklı, isabet eden yumruk sesi
+    public AudioClip punchMissSound; // YENİ: Hafif, boşa sallanan rüzgar sesi
     public AudioClip deathSound;
     public AudioClip buttonClickSound;
 

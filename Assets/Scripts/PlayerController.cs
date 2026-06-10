@@ -268,8 +268,11 @@ public class PlayerController : NetworkBehaviour
     [ServerRpc]
     private void PunchActionServerRpc()
     {
-        PunchActionClientRpc();
         Collider[] hitPlayers = Physics.OverlapSphere(punchPoint.position, punchRadius, playerLayer);
+        
+        // YENİ: Başlangıçta kimseye vuramadığımızı varsayıyoruz
+        bool hasHitAnyPlayer = false;
+
         foreach (Collider hit in hitPlayers)
         {
             if (hit.gameObject == gameObject) continue;
@@ -277,6 +280,9 @@ public class PlayerController : NetworkBehaviour
             PlayerController targetPlayer = hit.GetComponent<PlayerController>();
             if (targetPlayer != null)
             {
+                // MÜHÜR: Listede kendimiz hariç geçerli bir oyuncu bulduk, yani vuruş başarılı!
+                hasHitAnyPlayer = true; 
+
                 if (BaseMinigameManager.ActiveMinigame != null) 
                     BaseMinigameManager.ActiveMinigame.OnPlayerHit(OwnerClientId, targetPlayer.OwnerClientId);
                     
@@ -285,15 +291,21 @@ public class PlayerController : NetworkBehaviour
                 targetPlayer.TakeHitServerRpc(knockbackDir * knockbackForce);
             }
         }
+
+        // GÜNCELLENDİ: İstemcilere animasyonu oynatmasını söylerken isabet bilgisini de gönderiyoruz
+        PunchActionClientRpc(hasHitAnyPlayer);
     }
 
     [ClientRpc]
-    private void PunchActionClientRpc()
+    private void PunchActionClientRpc(bool hasHit) // YENİ: bool parametresi eklendi
     {
         if (animator != null) animator.SetTrigger("Punch");
+
+        // GÜNCELLENDİ: Sunucudan gelen isabet bilgisine göre doğru ses efektini seçip çalıyoruz
         if (AudioManager.Instance != null)
         {
-            AudioManager.Instance.PlaySFX(AudioManager.Instance.punchSound);
+            AudioClip soundToPlay = hasHit ? AudioManager.Instance.punchHitSound : AudioManager.Instance.punchMissSound;
+            AudioManager.Instance.PlaySFX(soundToPlay);
         }
     }
 

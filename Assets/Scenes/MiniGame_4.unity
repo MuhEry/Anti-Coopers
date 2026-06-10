@@ -5648,7 +5648,6 @@ GameObject:
   m_Component:
   - component: {fileID: 2123881662}
   - component: {fileID: 2123881661}
-  - component: {fileID: 2123881660}
   - component: {fileID: 2123881659}
   m_Layer: 0
   m_Name: SpectatorCamera
@@ -5701,14 +5700,6 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
---- !u!81 &2123881660
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2123881657}
-  m_Enabled: 0
 --- !u!20 &2123881661
 Camera:
   m_ObjectHideFlags: 0

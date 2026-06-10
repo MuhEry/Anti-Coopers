@@ -5373,7 +5373,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1570272580}
   - component: {fileID: 1570272579}
-  - component: {fileID: 1570272578}
   - component: {fileID: 1570272581}
   m_Layer: 0
   m_Name: Main Camera
@@ -5382,14 +5381,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!81 &1570272578
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1570272577}
-  m_Enabled: 1
 --- !u!20 &1570272579
 Camera:
   m_ObjectHideFlags: 0
@@ -6866,6 +6857,7 @@ GameObject:
   - component: {fileID: 1845008068}
   - component: {fileID: 1845008067}
   - component: {fileID: 1845008066}
+  - component: {fileID: 1845008070}
   m_Layer: 0
   m_Name: AudioManager
   m_TagString: Untagged
@@ -7090,7 +7082,8 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 5fcba567914563345851f2859f33b21d, type: 3}
   - {fileID: 8300000, guid: e3c5992a57804164dbe7e78104282537, type: 3}
   - {fileID: 8300000, guid: a1fe70560cd343043aabd39fdabbe5f6, type: 3}
-  punchSound: {fileID: 8300000, guid: a47c31f7db24a9c4399ce91c67b0b70e, type: 3}
+  punchHitSound: {fileID: 8300000, guid: a47c31f7db24a9c4399ce91c67b0b70e, type: 3}
+  punchMissSound: {fileID: 8300000, guid: 716b3a8d32151e64e8eb746d35ba56ba, type: 3}
   deathSound: {fileID: 8300000, guid: c7b7b7bc52f361b4bb0f16fd1f788a07, type: 3}
   buttonClickSound: {fileID: 8300000, guid: a934ea6509914594cb1d87a8eebf25ed, type: 3}
 --- !u!4 &1845008069
@@ -7108,6 +7101,14 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!81 &1845008070
+AudioListener:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1845008065}
+  m_Enabled: 1
 --- !u!1 &1888230008
 GameObject:
   m_ObjectHideFlags: 0
