@@ -307,6 +307,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: SM_Gen_Prop_Sack_01
       objectReference: {fileID: 0}
+    - target: {fileID: 1805285506636410991, guid: 5697a9a014822354e84dd5e8c2543a8f, type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2277,12 +2281,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 1920, y: 1080}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
+  m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -2899,6 +2903,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: SM_Gen_Env_Stump_03
       objectReference: {fileID: 0}
+    - target: {fileID: 5329577460968038239, guid: 38d257c588f863747bd31ff57651e099, type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -3340,6 +3348,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: SM_Gen_Env_Log_01
       objectReference: {fileID: 0}
+    - target: {fileID: 1480531524279832838, guid: 3e650bba3bae09541be841308573126d, type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
     - target: {fileID: 2287889355060530108, guid: 3e650bba3bae09541be841308573126d, type: 3}
       propertyPath: m_LocalPosition.x
       value: 3.42
@@ -3562,11 +3574,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 386683464}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 480}
+  m_AnchorMin: {x: 0.5, y: 1}
+  m_AnchorMax: {x: 0.5, y: 1}
+  m_AnchoredPosition: {x: 0, y: -20}
   m_SizeDelta: {x: 200, y: 50}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &591570388
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4708,6 +4720,14 @@ PrefabInstance:
     - target: {fileID: 1464732720955938588, guid: bdf6235d3ceae7d45ab839bf99616cbe, type: 3}
       propertyPath: m_Name
       value: SM_Gen_Prop_Medkit_01
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464732720955938588, guid: bdf6235d3ceae7d45ab839bf99616cbe, type: 3}
+      propertyPath: m_Layer
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 2170503891041674244, guid: bdf6235d3ceae7d45ab839bf99616cbe, type: 3}
+      propertyPath: m_Layer
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 2240565049670765990, guid: bdf6235d3ceae7d45ab839bf99616cbe, type: 3}
       propertyPath: m_LocalPosition.x
@@ -9774,6 +9794,10 @@ PrefabInstance:
     - target: {fileID: 4123662889923936240, guid: 7f44ecdd42b82f645895aa5063db454c, type: 3}
       propertyPath: m_Name
       value: SM_Gen_Env_Log_02
+      objectReference: {fileID: 0}
+    - target: {fileID: 4123662889923936240, guid: 7f44ecdd42b82f645895aa5063db454c, type: 3}
+      propertyPath: m_Layer
+      value: 7
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
