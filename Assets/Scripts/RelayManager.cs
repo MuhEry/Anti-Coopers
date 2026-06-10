@@ -503,29 +503,11 @@ public class RelayManager : MonoBehaviour
             }
             else
             {
-                Debug.Log("TÜM PLAYLIST BİTTİ! Skorları incelemek için bekleniyor...");
-                StartCoroutine(DelayedReturnToLobby(12f));
+                LeaveLobby();
             }
         }
     }
 
-    private IEnumerator DelayedReturnToLobby(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        LeaveLobby();
-    }
-    /*public void ReturnToLobby()
-    {
-        if (!NetworkManager.Singleton.IsHost) return;
-
-        isReturningToLobby = true;
-
-        // Tüm clientlar bu scene load'u takip eder, bağlantı kopmaz
-        NetworkManager.Singleton.SceneManager.LoadScene(
-            "MainMenu",
-            UnityEngine.SceneManagement.LoadSceneMode.Single
-        );
-    }*/
     private void OnSceneLoadCompleted(string sceneName, UnityEngine.SceneManagement.LoadSceneMode loadMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
     {
         if (sceneName.StartsWith("MiniGame_") || sceneName == "GameScene")

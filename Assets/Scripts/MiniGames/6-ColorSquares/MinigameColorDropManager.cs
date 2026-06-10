@@ -23,10 +23,13 @@ public class MinigameColorDropManager : BaseMinigameManager
 
     public override bool IsGameStarted => gameStarted.Value;
 
+    // Karoların düşürülmesinde referans alınacak ana Türkçe renk listesi
     private List<string> colors = new List<string> 
     { 
         "KIRMIZI", "MAVİ", "YEŞİL", "SARI", "TURUNCU", "MOR", "PEMBE", "SİYAH", "BEYAZ" 
     };
+
+    // Yazının bürünebileceği rastgele renk havuzu (Hex kodlarına gerek kalmadı)
     private Color32[] textColors = 
     { 
         Color.red, 
@@ -89,34 +92,45 @@ public class MinigameColorDropManager : BaseMinigameManager
         {
             UpdateTimerUIClientRpc($"TUR: {currentRound} / {maxRounds}");
 
-            // 1. Rastgele bir renk seç
-            int colorIndex = Random.Range(0, colors.Count);
-            string targetColorName = colors[colorIndex];
-            Color32 targetColor = textColors[colorIndex];
+            int targetColorIndex = Random.Range(0, colors.Count);
+            string targetColorName = colors[targetColorIndex];
 
-            // 2. Oyunculara rengi duyur ve süre boyunca geri say
+            int randomVisualColorIndex = Random.Range(0, textColors.Length);
+            Color32 targetVisualColor = textColors[randomVisualColorIndex];
+
             float timeCount = roundDuration;
             while (timeCount > 0)
             {
-                UpdateCountdownUIClientRpc($"{targetColorName}\n{timeCount:F1}s", targetColor);
+                UpdateCountdownUIClientRpc($"{targetColorName}\n{timeCount:F1}s", targetVisualColor);
                 yield return new WaitForSeconds(0.1f);
                 timeCount -= 0.1f;
             }
 
             UpdateCountdownUIClientRpc("SÜRE BİTTİ!", Color.white);
 
-            // 3. Yanlış karoları düşür emrini ağa fırlat
             string englishColorName = ConvertToEnglish(targetColorName);
             TriggerTilesClientRpc(englishColorName);
 
-            // Oyuncuların düşmesi için 2 saniye bekle
+            // Oyuncuların lavın içine düşmesi için beklenen süre
             yield return new WaitForSeconds(2f);
 
-            // 4. Karoları sıfırla ve yeni tura hazırla
+            // =================================================================
+            // YENİ ADALETLİ PUAN SİSTEMİ: 
+            // Tur bitti, karolar sıfırlanmadan önce HALA HAYATTA olan herkese puan veriyoruz!
+            if (IsServer)
+            {
+                foreach (ulong clientId in alivePlayers)
+                {
+                    // Her başarılı tur için oyunculara 10'ar puan ekle
+                    RelayManager.Instance.AddScore(clientId, 10);
+                }
+            }
+            // =================================================================
+
+            // Karoları sıfırla ve yeni tura hazırla
             ResetTilesClientRpc();
             currentRound++;
             
-            // Zorlaştırma algoritması: Her tur süre %15 kısalsın
             roundDuration = Mathf.Max(1.5f, roundDuration * 0.85f); 
             yield return new WaitForSeconds(1.5f);
         }
@@ -156,7 +170,6 @@ public class MinigameColorDropManager : BaseMinigameManager
         if (timerText != null) timerText.text = text;
     }
 
-    // Bizim evrensel DeathZone tetiklendiğinde çalışan fonksiyonumuz
     public override void PlayerEliminated(ulong clientId)
     {
         if (!IsServer || gameEnded) return;
@@ -164,11 +177,10 @@ public class MinigameColorDropManager : BaseMinigameManager
 
         alivePlayers.Remove(clientId);
 
-        // Elenene hayatta kaldığı tur kadar puan yaz
-        int roundScore = currentRound * 10;
-        RelayManager.Instance.AddScore(clientId, roundScore);
+        int totalScoreEarnedSoFar = (currentRound - 1) * 10;
 
-        EliminatePlayerClientRpc(clientId, roundScore);
+        // UI'da oyuncuya toplamda kaç puanla elendiğini dürüstçe gösteriyoruz
+        EliminatePlayerClientRpc(clientId, totalScoreEarnedSoFar); 
 
         if (alivePlayers.Count <= 1) EndGame();
     }
@@ -191,14 +203,12 @@ public class MinigameColorDropManager : BaseMinigameManager
                 statusText.text = $"<color=red>ELENDİN!</color>\n<size=40>+{score} Puan</size>";
             }
 
-            // Kameraları kapat, Spectator'ı aç
             var vCams = FindObjectsByType<Unity.Cinemachine.CinemachineCamera>(FindObjectsSortMode.None);
             foreach (var vCam in vCams) vCam.gameObject.SetActive(false);
             if (Camera.main != null) Camera.main.gameObject.SetActive(false);
 
             if (spectatorCamera != null) spectatorCamera.SetActive(true);
 
-            // Yerel Ölüm Sesini Çal
             if (AudioManager.Instance != null) AudioManager.Instance.PlaySFX(AudioManager.Instance.deathSound);
         }
     }
@@ -212,7 +222,7 @@ public class MinigameColorDropManager : BaseMinigameManager
         {
             ulong winnerId = 0;
             foreach (var id in alivePlayers) winnerId = id;
-            RelayManager.Instance.AddScore(winnerId, 30); // Kazanana dev bonus!
+            RelayManager.Instance.AddScore(winnerId, 30); 
             ShowWinnerUIClientRpc(winnerId);
         }
 

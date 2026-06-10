@@ -2459,7 +2459,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &1078965935
@@ -2996,7 +2996,7 @@ MonoBehaviour:
   countdownText: {fileID: 1078965934}
   statusText: {fileID: 1862425097}
   spectatorCamera: {fileID: 1116506216}
-  roundDuration: 5
+  roundDuration: 15
   maxRounds: 5
 --- !u!1 &1231002304
 GameObject:
