@@ -4,7 +4,6 @@ using System.Collections.Generic;
 
 public class RaceFinishLine : MonoBehaviour
 {
-    // Her oyuncu için ayrı ayrı takip — tek triggered tüm oyuncuları bloklıyordu
     private HashSet<ulong> finishedClients = new HashSet<ulong>();
 
     private void OnTriggerEnter(Collider other)
@@ -13,14 +12,20 @@ public class RaceFinishLine : MonoBehaviour
         if (!other.CompareTag("Player")) return;
 
         NetworkObject netObj = other.GetComponent<NetworkObject>();
-        if (netObj == null) return;
+        if (netObj != null)
+        {
+            ulong clientId = netObj.OwnerClientId;
 
-        ulong clientId = netObj.OwnerClientId;
+            // Bu oyuncu daha önce geçmediyse işle
+            if (finishedClients.Contains(clientId)) return;
 
-        // Bu oyuncu daha önce geçmediyse işle
-        if (finishedClients.Contains(clientId)) return;
+            finishedClients.Add(clientId);
 
-        finishedClients.Add(clientId);
-        MinigameRaceManager.Instance.PlayerFinished(clientId);
+            // MUAZZAM MİMARİ: Hangi haritada olursak olalım aktif menajere haber uçar!
+            if (BaseMinigameManager.ActiveMinigame != null)
+            {
+                BaseMinigameManager.ActiveMinigame.PlayerFinished(clientId);
+            }
+        }
     }
 }

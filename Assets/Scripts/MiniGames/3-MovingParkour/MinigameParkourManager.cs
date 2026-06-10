@@ -28,6 +28,7 @@ public class MinigameParkourManager : BaseMinigameManager
     public override bool IsGameStarted => gameStarted.Value;
 
     private bool gameEnded = false;
+    private HashSet<ulong> finishedPlayers = new HashSet<ulong>();
     
     // SİHİRLİ LİSTE: Her oyuncunun (ulong) hangi noktaları (int) aldığını tutar
     private Dictionary<ulong, HashSet<int>> playerProgress = new Dictionary<ulong, HashSet<int>>();
@@ -80,6 +81,30 @@ public class MinigameParkourManager : BaseMinigameManager
             timeRemaining.Value = Mathf.Max(0, timeRemaining.Value - 1f);
         }
         if (!gameEnded) EndGame();
+    }
+    // Evrensel bitiş çizgisinden gelen haberi yakalıyoruz
+    public override void PlayerFinished(ulong clientId)
+    {
+        if (!IsServer) return;
+
+        if (!finishedPlayers.Contains(clientId))
+        {
+            finishedPlayers.Add(clientId);
+
+            // Bitiş çizgisine ulaşana ekstra final puanı verelim
+            RelayManager.Instance.AddScore(clientId, 15);
+
+            // Odadaki toplam oyuncu sayısını al
+            int totalConnectedPlayers = NetworkManager.Singleton.ConnectedClients.Count;
+
+            // Eğer bitirenlerin sayısı, odadaki oyuncu sayısına eşit veya büyükse oyunu bitir!
+            if (finishedPlayers.Count >= totalConnectedPlayers)
+            {
+                // Senin kodundaki oyunu bitirme fonksiyonunun adı neyse onu çağır
+                // Muhtemelen EndGame() veya benzeri bir isimdir.
+                EndGame(); 
+            }
+        }
     }
 
     private void UpdateTimerUI(float oldVal, float newVal)

@@ -16,6 +16,10 @@ public class PlayerController : NetworkBehaviour
     [SerializeField] private LayerMask playerLayer;
     [SerializeField] private float knockbackForce = 8f;
     [SerializeField] private float punchCooldown = 1.5f; 
+    [SerializeField] private float stunDuration = 1f;
+
+    [Header("Efekt Ayarları")]
+    [SerializeField] private GameObject stunEffectObject;
 
     [Header("Zemin Kontrolü")]
     [SerializeField] private Transform groundCheckPoint; 
@@ -287,6 +291,10 @@ public class PlayerController : NetworkBehaviour
     private void PunchActionClientRpc()
     {
         if (animator != null) animator.SetTrigger("Punch");
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.punchSound);
+        }
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -299,7 +307,7 @@ public class PlayerController : NetworkBehaviour
         {
             rb.AddForce(force, ForceMode.Impulse);
             isStunned = true;
-            stunTimer = 1.5f; 
+            stunTimer = stunDuration; 
             SetStunStateServerRpc(true);
         }
     }
@@ -311,6 +319,10 @@ public class PlayerController : NetworkBehaviour
     private void SetStunStateClientRpc(bool stunned)
     {
         if (animator != null) animator.SetBool("isStunned", stunned);
+        if (stunEffectObject != null)
+        {
+            stunEffectObject.SetActive(stunned);
+        }
     }
 
     private void OnDrawGizmosSelected()

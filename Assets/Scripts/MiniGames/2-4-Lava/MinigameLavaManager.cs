@@ -144,6 +144,10 @@ public class MinigameLavaManager : BaseMinigameManager
         // Elenen kişi "BİZ" isek
         if (NetworkManager.Singleton.LocalClientId == eliminatedId)
         {
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.deathSound);
+            }
             // 1. Karakteri dondur
             var playerObj = NetworkManager.Singleton.LocalClient?.PlayerObject;
             if (playerObj != null)

@@ -2565,7 +2565,6 @@ GameObject:
   - component: {fileID: 418920001}
   - component: {fileID: 418920000}
   - component: {fileID: 418919999}
-  - component: {fileID: 418919998}
   - component: {fileID: 418919997}
   m_Layer: 0
   m_Name: Cube (3)
@@ -2586,33 +2585,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79561d0c20fc0404ea92b836f46d009e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ParkourPoint
-  ShowTopMostFoldoutHeaderGroup: 1
   pointId: 4
---- !u!114 &418919998
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 418919996}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2117247649
-  InScenePlacedSourceGlobalObjectIdHash: 0
-  DeferredDespawnTick: 0
-  Ownership: 1
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 1
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
-  SyncOwnerTransformWhenParented: 1
-  AllowOwnerToParent: 0
 --- !u!65 &418919999
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3241,7 +3214,6 @@ GameObject:
   - component: {fileID: 511524604}
   - component: {fileID: 511524603}
   - component: {fileID: 511524602}
-  - component: {fileID: 511524600}
   - component: {fileID: 511524601}
   m_Layer: 0
   m_Name: Cube
@@ -3250,31 +3222,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &511524600
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 511524599}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 660763153
-  InScenePlacedSourceGlobalObjectIdHash: 0
-  DeferredDespawnTick: 0
-  Ownership: 1
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 1
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
-  SyncOwnerTransformWhenParented: 1
-  AllowOwnerToParent: 0
 --- !u!114 &511524601
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3287,7 +3234,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79561d0c20fc0404ea92b836f46d009e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ParkourPoint
-  ShowTopMostFoldoutHeaderGroup: 1
   pointId: 1
 --- !u!65 &511524602
 BoxCollider:
@@ -3911,7 +3857,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 3.8, y: 0, z: 0}
-  speed: 1.2
+  speed: 0.9
   useSmoothMovement: 0
 --- !u!114 &605064292
 MonoBehaviour:
@@ -4897,7 +4843,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4062619256373206, guid: a2e435ea5b0f606429670d1f3f1f1504, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1.5
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 4062619256373206, guid: a2e435ea5b0f606429670d1f3f1f1504, type: 3}
       propertyPath: m_LocalScale.y
@@ -5602,7 +5548,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4062619256373206, guid: a2e435ea5b0f606429670d1f3f1f1504, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1.5
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 4062619256373206, guid: a2e435ea5b0f606429670d1f3f1f1504, type: 3}
       propertyPath: m_LocalScale.y
@@ -7150,7 +7096,6 @@ GameObject:
   - component: {fileID: 1088154593}
   - component: {fileID: 1088154592}
   - component: {fileID: 1088154591}
-  - component: {fileID: 1088154590}
   - component: {fileID: 1088154589}
   m_Layer: 0
   m_Name: Cube (2)
@@ -7171,33 +7116,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79561d0c20fc0404ea92b836f46d009e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ParkourPoint
-  ShowTopMostFoldoutHeaderGroup: 1
   pointId: 3
---- !u!114 &1088154590
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1088154588}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 756939907
-  InScenePlacedSourceGlobalObjectIdHash: 0
-  DeferredDespawnTick: 0
-  Ownership: 1
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 1
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
-  SyncOwnerTransformWhenParented: 1
-  AllowOwnerToParent: 0
 --- !u!65 &1088154591
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -9690,7 +9609,6 @@ GameObject:
   - component: {fileID: 1495819360}
   - component: {fileID: 1495819359}
   - component: {fileID: 1495819358}
-  - component: {fileID: 1495819357}
   - component: {fileID: 1495819356}
   m_Layer: 0
   m_Name: Cube (1)
@@ -9711,33 +9629,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79561d0c20fc0404ea92b836f46d009e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ParkourPoint
-  ShowTopMostFoldoutHeaderGroup: 1
   pointId: 2
---- !u!114 &1495819357
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1495819355}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1131640111
-  InScenePlacedSourceGlobalObjectIdHash: 0
-  DeferredDespawnTick: 0
-  Ownership: 1
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 1
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
-  SyncOwnerTransformWhenParented: 1
-  AllowOwnerToParent: 0
 --- !u!65 &1495819358
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -10041,7 +9933,6 @@ GameObject:
   - component: {fileID: 1532864727}
   - component: {fileID: 1532864726}
   - component: {fileID: 1532864725}
-  - component: {fileID: 1532864724}
   - component: {fileID: 1532864723}
   m_Layer: 0
   m_Name: Cube (4)
@@ -10062,33 +9953,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79561d0c20fc0404ea92b836f46d009e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ParkourPoint
-  ShowTopMostFoldoutHeaderGroup: 1
   pointId: 5
---- !u!114 &1532864724
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1532864722}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2194679742
-  InScenePlacedSourceGlobalObjectIdHash: 0
-  DeferredDespawnTick: 0
-  Ownership: 1
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 1
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
-  SyncOwnerTransformWhenParented: 1
-  AllowOwnerToParent: 0
 --- !u!65 &1532864725
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -10790,7 +10655,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 5, y: 0, z: 0}
-  speed: 1.5
+  speed: 1.3
   useSmoothMovement: 0
 --- !u!114 &1718784614
 MonoBehaviour:
@@ -11851,8 +11716,7 @@ GameObject:
   - component: {fileID: 1901771213}
   - component: {fileID: 1901771212}
   - component: {fileID: 1901771211}
-  - component: {fileID: 1901771210}
-  - component: {fileID: 1901771209}
+  - component: {fileID: 1901771215}
   m_Layer: 0
   m_Name: Cube (5)
   m_TagString: Untagged
@@ -11860,45 +11724,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1901771209
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1901771208}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 79561d0c20fc0404ea92b836f46d009e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ParkourPoint
-  ShowTopMostFoldoutHeaderGroup: 1
-  pointId: 6
---- !u!114 &1901771210
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1901771208}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 4115621721
-  InScenePlacedSourceGlobalObjectIdHash: 0
-  DeferredDespawnTick: 0
-  Ownership: 1
-  AlwaysReplicateAsRoot: 0
-  SynchronizeTransform: 1
-  ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
-  SpawnWithObservers: 1
-  DontDestroyWithOwner: 0
-  AutoObjectParentSync: 1
-  SyncOwnerTransformWhenParented: 1
-  AllowOwnerToParent: 0
 --- !u!65 &1901771211
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -11992,6 +11817,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1981830846}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1901771215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1901771208}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f162873b2db2af4da71cf24ab011389, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RaceFinishLine
 --- !u!1001 &1925899230
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12435,7 +12272,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 3.8, y: 0, z: 0}
-  speed: 0.9
+  speed: 0.6
   useSmoothMovement: 0
 --- !u!54 &2029412420
 Rigidbody:

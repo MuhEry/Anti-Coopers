@@ -459,6 +459,13 @@ public class RelayManager : MonoBehaviour
             isGameInProgress = true; 
             showingScoreboard = false; 
             currentMapIndex = 0;
+
+            // --- YENİ: Oyuna geçerken rastgele müzik çalmasını tetikliyoruz ---
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayRandomGameMusic();
+            }
+
             NetworkManager.Singleton.SceneManager.LoadScene(gamePlaylist[currentMapIndex], UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
     }
