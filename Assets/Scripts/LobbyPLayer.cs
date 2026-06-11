@@ -56,9 +56,19 @@ public class LobbyPlayer : NetworkBehaviour
     }
 
     [ServerRpc]
-    public void SelectColorServerRpc(Color32 newColor)
+    public void SelectColorServerRpc(Color32 chosenColor)
     {
-        playerColor.Value = newColor;
+        // 1. Oyuncunun ağ üzerindeki rengini güncelle
+        playerColor.Value = chosenColor;
+
+        // 2. SİHİRLİ DOKUNUŞ: Oyuncu renk değiştirdiği için "Hazır" durumunu bozuyoruz!
+        isReady.Value = false;
+
+        // 3. Odadaki tüm listeyi anında tazelemek için RelayManager'ı tetikliyoruz
+        if (RelayManager.Instance != null)
+        {
+            RelayManager.Instance.UpdatePlayerListUI();
+        }
     }
 
     private void Awake()

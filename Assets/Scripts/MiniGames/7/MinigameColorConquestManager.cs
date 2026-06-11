@@ -9,6 +9,7 @@ public class MinigameColorConquestManager : BaseMinigameManager
     [Header("UI Elemanları")]
     [SerializeField] private TMP_Text timerText;
     [SerializeField] private TMP_Text countdownText;
+    [SerializeField] private TMP_Text statusText;       // YENİ: Süre bitince kazanılan puanı yazacağımız büyük yazı
 
     [Header("Ayarlar")]
     [SerializeField] private float gameDuration = 45f;
@@ -37,6 +38,8 @@ public class MinigameColorConquestManager : BaseMinigameManager
         timeRemaining.OnValueChanged += (oldV, newV) => {
             if (timerText != null) timerText.text = $"SÜRE: {Mathf.CeilToInt(newV)}s";
         };
+
+        if (statusText != null) statusText.gameObject.SetActive(false);
     }
 
     private IEnumerator GameRoutine()
@@ -68,10 +71,16 @@ public class MinigameColorConquestManager : BaseMinigameManager
         gameEnded = true;
         gameStarted.Value = false;
 
-        // Skor Hesaplama Algoritması
+        // 1. ADIM: Aktif bağlı oyuncu sayısını alıyoruz
+        int playerCount = NetworkManager.Singleton.ConnectedClients.Count;
+        if (playerCount == 0) playerCount = 1; // Sıfıra bölünme hatasını (Zero Division) önleme barajı
+
+        // 2. ADIM: Matematiksel modeli kuruyoruz
+        // Toplam 400 karo üzerinden kişi başına düşen adil karo miktarını hesapla
+        float fairShareOfTiles = 400f / playerCount; 
+
         Dictionary<ulong, int> playerTileCounts = new Dictionary<ulong, int>();
 
-        // Herkesi 0 karo ile başlat
         foreach (var clientId in NetworkManager.Singleton.ConnectedClients.Keys)
         {
             playerTileCounts[clientId] = 0;
@@ -87,11 +96,25 @@ public class MinigameColorConquestManager : BaseMinigameManager
             }
         }
 
-        // Karolar oranında puan dağıt (Örn: Her 1 karo = 2 Puan)
+        // 3. ADIM: Orantılı Göreli Puan Dağıtımı
         foreach (var kvp in playerTileCounts)
         {
-            int earnedScore = kvp.Value * 2;
-            RelayManager.Instance.AddScore(kvp.Key, earnedScore);
+            int rawTiles = kvp.Value;
+            
+            // SİHİRLİ FORMÜL: (Boyanan Karo / Adil Pay) * 50
+            float calculatedScore = (rawTiles / fairShareOfTiles) * 50f;
+
+            // Puanı en yakın tam sayıya (int) yuvarla
+            int finalCalculatedScore = Mathf.RoundToInt(calculatedScore);
+
+            // Maksimum veya minimum puan sınırlandırması koymak istersen burayı esnetebilirsin
+            finalCalculatedScore = Mathf.Max(0, finalCalculatedScore); // Puan eksiye düşmesin
+
+            // Veritabanına/Skor tablosuna nihai int puanı ekle
+            RelayManager.Instance.AddScore(kvp.Key, finalCalculatedScore);
+
+            // Her oyuncunun kendi ekranında görmesi için ClientRpc fırlat
+            ShowMyEndScoreClientRpc(kvp.Key, rawTiles, finalCalculatedScore);
         }
 
         UpdateCountdownClientRpc("SÜRE BİTTİ!");
@@ -102,6 +125,24 @@ public class MinigameColorConquestManager : BaseMinigameManager
     private void UpdateCountdownClientRpc(string text)
     {
         if (countdownText != null) countdownText.text = text;
+    }
+
+    // YENİ: Sadece ilgili oyuncunun ekranına özel puan kartı basan fonksiyon
+    [ClientRpc]
+    private void ShowMyEndScoreClientRpc(ulong targetClientId, int tileCount, int earnedScore)
+    {
+        // Bu kod ağdaki herkesin bilgisayarında çalışır ama içerideki IF sayesinde 
+        // sadece hedef oyuncunun ekranında UI'ı tetikler! (Kişiselleştirilmiş UI)
+        if (NetworkManager.Singleton.LocalClientId == targetClientId)
+        {
+            if (statusText != null)
+            {
+                statusText.gameObject.SetActive(true);
+                
+                // Oyuncuya kaç karo boyadığını ve matematiksel olarak aldığı nihai int puanı gösteriyoruz
+                statusText.text = $"<color=yellow>{tileCount} KARO BOYADIN!</color>\n<size=50><color=green>+{earnedScore} Puan</color></size>";
+            }
+        }
     }
 
     private IEnumerator DelayedEnd()

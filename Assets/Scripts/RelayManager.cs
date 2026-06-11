@@ -510,6 +510,27 @@ public class RelayManager : MonoBehaviour
 
     private void OnSceneLoadCompleted(string sceneName, UnityEngine.SceneManagement.LoadSceneMode loadMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
     {
+        // =================================================================
+        // KUSURSUZ MÜZİK SENKRONİZASYONU:
+        // İster Host ister Client olsun, yeni harita yüklemesi tamamlandığı an 
+        // herkesin kendi yerel cihazında oyun müzikleri çalmaya başlar!
+        if (sceneName.StartsWith("MiniGame_") || sceneName == "GameScene")
+        {
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayRandomGameMusic();
+            }
+        }
+        else if (sceneName == "MainMenu")
+        {
+            // Eğer ana menüye veya lobiye geri dönüldüyse menü müziğini geri aç
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayMusic(AudioManager.Instance.menuMusic);
+            }
+        }
+        // =================================================================
+
         if (sceneName.StartsWith("MiniGame_") || sceneName == "GameScene")
         {
             foreach (ulong clientId in clientsCompleted)

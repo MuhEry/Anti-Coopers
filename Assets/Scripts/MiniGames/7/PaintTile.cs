@@ -1,9 +1,8 @@
 using Unity.Netcode;
 using UnityEngine;
 
-public class PaintTile : MonoBehaviour
+public class PaintTile : NetworkBehaviour // KURAL: NetworkBehaviour olmalı!
 {
-    // Şu an bu karoyu hangi Client ID'ye sahip oyuncu boyadı? (Varsayılan 9999 = Sahipsiz)
     public NetworkVariable<ulong> paintedByPlayerId = new NetworkVariable<ulong>(
         9999, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
@@ -16,22 +15,35 @@ public class PaintTile : MonoBehaviour
         if (meshRenderer != null) originalColor = meshRenderer.material.color;
     }
 
-    private void Start()
+    public override void OnNetworkSpawn()
     {
-        // Ağ değişkeni değiştikçe rengi tüm oyuncularda güncelle
-        paintedByPlayerId.OnValueChanged += (oldId, newId) => UpdateTileVisual(newId);
+        // Değişim aboneliğini ağ doğduğunda yapıyoruz
+        paintedByPlayerId.OnValueChanged += OnTileColorChanged;
+
+        // Misafir oyuncu sahneye yeni girdiğinde, yerdeki mevcut durumu hemen görsün diye:
+        UpdateTileVisual(paintedByPlayerId.Value);
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        // Bellek sızıntısını önlemek için abonelikten çıkıyoruz
+        paintedByPlayerId.OnValueChanged -= OnTileColorChanged;
+    }
+
+    private void OnTileColorChanged(ulong oldId, ulong newId)
+    {
+        UpdateTileVisual(newId);
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (!NetworkManager.Singleton.IsServer) return;
+        if (!IsServer) return; // Kısa yoldan IsServer kontrolü
 
         if (other.CompareTag("Player"))
         {
             NetworkObject netObj = other.GetComponent<NetworkObject>();
             if (netObj != null)
             {
-                // Karoyu basan oyuncunun ID'sine mühürle
                 paintedByPlayerId.Value = netObj.OwnerClientId;
             }
         }
@@ -45,7 +57,6 @@ public class PaintTile : MonoBehaviour
             return;
         }
 
-        // RelayManager'da kayıtlı olan oyuncu rengini çekip karoya boyuyoruz!
         if (RelayManager.Instance != null && RelayManager.Instance.GetMySavedData(playerId, out string name, out Color32 pColor))
         {
             if (meshRenderer != null) meshRenderer.material.color = pColor;
@@ -54,7 +65,7 @@ public class PaintTile : MonoBehaviour
 
     public void ResetTile()
     {
-        if (NetworkManager.Singleton.IsServer)
+        if (IsServer)
         {
             paintedByPlayerId.Value = 9999;
         }

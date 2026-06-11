@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.InputSystem;
 
 public class PauseMenuManager : MonoBehaviour
@@ -6,7 +7,9 @@ public class PauseMenuManager : MonoBehaviour
     [Header("UI Panelleri")]
     [Tooltip("Açılıp kapanacak olan asıl menü paneli (Arka plan, butonlar vs.)")]
     [SerializeField] private GameObject pausePanel;
-
+    [Header("Ses Arayüz Elemanları")]
+    [SerializeField] private Slider musicSlider;
+    [SerializeField] private Slider sfxSlider;
     private bool isMenuOpen = false;
 
     private void Start()
@@ -15,6 +18,28 @@ public class PauseMenuManager : MonoBehaviour
         if (pausePanel != null)
         {
             pausePanel.SetActive(false);
+        }
+        // Sahne ilk açıldığında, hiyerarşideki AudioManager'ı otomatik olarak buluyoruz!
+        if (AudioManager.Instance != null)
+        {
+            // 1. Slider'ların OnValueChanged olaylarını kod üzerinden (dinamik) bağlıyoruz
+            if (musicSlider != null)
+            {
+                // Önce eski eventleri temizle (çakışma olmasın)
+                musicSlider.onValueChanged.RemoveAllListeners();
+                // AudioManager'daki SetMusicVolume fonksiyonunu slider'a bağlıyoruz
+                musicSlider.onValueChanged.AddListener(AudioManager.Instance.SetMusicVolume);
+            }
+
+            if (sfxSlider != null)
+            {
+                sfxSlider.onValueChanged.RemoveAllListeners();
+                sfxSlider.onValueChanged.AddListener(AudioManager.Instance.SetSFXVolume);
+            }
+        }
+        else
+        {
+            Debug.LogError("[PauseMenu] Sahnede AudioManager bulunamadı!");
         }
     }
 

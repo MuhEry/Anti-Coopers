@@ -1,8 +1,12 @@
 using UnityEngine;
+using UnityEngine.Audio;
 
 public class AudioManager : MonoBehaviour
 {
     public static AudioManager Instance;
+
+    [Header("Mikser Ayarları")] // YENİ
+    [SerializeField] private AudioMixer audioMixer;
 
     [Header("Ses Kaynakları (Audio Sources)")]
     [SerializeField] private AudioSource musicSource; 
@@ -88,6 +92,30 @@ public class AudioManager : MonoBehaviour
         if (clip != null && sfxSource != null)
         {
             sfxSource.PlayOneShot(clip);
+        }
+    }
+    public void SetMusicVolume(float value)
+    {
+        // Slider 0-1 arası gelir ama mikser -80dB ile 20dB arası çalışır. 
+        // Matematiksel olarak logaritmik çevrim yapıyoruz ki ses pürüzsüz azalsın.
+        if (value <= 0)
+        {
+            audioMixer.SetFloat("MusicVol", -80f); // Sıfıra çekince sesi tamamen kes (Mute)
+        }
+        else
+        {
+            audioMixer.SetFloat("MusicVol", Mathf.Log10(value) * 20f);
+        }
+    }
+    public void SetSFXVolume(float value)
+    {
+        if (value <= 0)
+        {
+            audioMixer.SetFloat("SFXVol", -80f);
+        }
+        else
+        {
+            audioMixer.SetFloat("SFXVol", Mathf.Log10(value) * 20f);
         }
     }
 }
