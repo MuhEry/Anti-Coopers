@@ -108,7 +108,7 @@ public class MinigameRaceManager : BaseMinigameManager
             timerText.text = $"SÜRE: {Mathf.CeilToInt(newVal)}s";
     }
 
-    public void PlayerFinished(ulong clientId)
+    public override void PlayerFinished(ulong clientId)
     {
         if (!IsServer || gameEnded) return;
 

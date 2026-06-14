@@ -40,9 +40,13 @@ public class PlayerController : NetworkBehaviour
     
     private float nextPunchTime = 0f; 
     private bool isGrounded = true;   
+    private bool isOnIce = false; // 3. MADDE: Tek bir merkezi buz kontrol değişkeni
     private Transform cameraTransform;
     private float nextJumpTime = 0f;
-    private float jumpCooldown = 0.25f; // Zıplama aralığı (Uzaya fırlamayı engeller)
+    private float jumpCooldown = 0.25f;
+
+    // 2. MADDE: Performans için Renderer Önbelleği (Cache)
+    private Renderer[] cachedRenderers;
 
     private void Start()
     {
@@ -54,6 +58,7 @@ public class PlayerController : NetworkBehaviour
             rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
 
+        // 4. MADDE: animator.transform.localRotation her frame çalışıyordu, sadece Start'ta kalması yeterli.
         if (animator != null)
         {
             animator.transform.localRotation = Quaternion.Euler(0, 0, 0); 
@@ -62,8 +67,13 @@ public class PlayerController : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        networkPlayerName.OnValueChanged += (oldV, newV) => UpdatePlayerVisuals();
-        networkPlayerColor.OnValueChanged += (oldV, newV) => UpdatePlayerVisuals();
+        // 2. MADDE: Sahneye doğunca renderer bileşenlerini bir kereye mahsus hafızaya alıyoruz (Sıfır GC Allocation)
+        cachedRenderers = GetComponentsInChildren<Renderer>();
+
+        // 1. MADDE: Event Sızıntısını (Leak) önlemek için adlandırılmış metotlarla (Named Methods) abonelik
+        networkPlayerName.OnValueChanged += OnNameChanged;
+        networkPlayerColor.OnValueChanged += OnColorChanged;
+        
         UpdatePlayerVisuals();
 
         if (IsOwner)
@@ -76,12 +86,14 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
+    // 1. MADDE İÇİN YENİ METOTLAR:
+    private void OnNameChanged(FixedString32Bytes oldV, FixedString32Bytes newV) => UpdatePlayerVisuals();
+    private void OnColorChanged(Color oldV, Color newV) => UpdatePlayerVisuals();
+
     private void Update()
     {
         if (!IsOwner) return;
 
-        // KUSURSUZ MİMARİ: Artık hangi minigame içinde olduğumuzu umursamıyoruz!
-        // Sadece "Aktif bir oyun var mı?" ve "O oyun başlamadı mı?" diye soruyoruz.
         if (BaseMinigameManager.ActiveMinigame != null && !BaseMinigameManager.ActiveMinigame.IsGameStarted)
         {
             rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
@@ -114,6 +126,24 @@ public class PlayerController : NetworkBehaviour
         if (groundCheckPoint != null)
         {
             isGrounded = Physics.CheckSphere(groundCheckPoint.position, groundCheckRadius, groundLayer);
+        }
+
+        // 3. MADDE: İki ayrı yerdeki Raycast'i teke indirip Update başında bir kere hesaplıyoruz
+        if (isGrounded)
+        {
+            RaycastHit hit;
+            if (Physics.Raycast(transform.position, Vector3.down, out hit, 1.3f))
+            {
+                isOnIce = hit.collider.sharedMaterial != null && hit.collider.sharedMaterial.name.Contains("Ice");
+            }
+            else
+            {
+                isOnIce = false;
+            }
+        }
+        else
+        {
+            isOnIce = false;
         }
         
         // --- HAREKET GİRDİLERİ ---
@@ -192,19 +222,59 @@ public class PlayerController : NetworkBehaviour
                 moveDir = (cameraForward * inputDir.z + cameraRight * inputDir.x).normalized;
             }
 
-            rb.linearVelocity = new Vector3(moveDir.x * moveSpeed, rb.linearVelocity.y, moveDir.z * moveSpeed);
-            
-            Quaternion targetRotation = Quaternion.LookRotation(moveDir);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 15f);
+            Vector3 targetVelocity = new Vector3(moveDir.x * moveSpeed, rb.linearVelocity.y, moveDir.z * moveSpeed);
+
+            // 3. MADDE: Artık yerel Raycast yerine yukarıda güncellenen merkezi 'isOnIce' kontrolünü kullanıyor
+            if (isOnIce)
+            {
+                float iceAcceleration = 0.2f;
+                float newX = Mathf.Lerp(rb.linearVelocity.x, targetVelocity.x, Time.deltaTime * iceAcceleration);
+                float newZ = Mathf.Lerp(rb.linearVelocity.z, targetVelocity.z, Time.deltaTime * iceAcceleration);
+                
+                rb.linearVelocity = new Vector3(newX, rb.linearVelocity.y, newZ);
+                
+                Quaternion targetRotation = Quaternion.LookRotation(moveDir);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 4f);
+            }
+            else
+            {
+                rb.linearVelocity = targetVelocity;
+                
+                Quaternion targetRotation = Quaternion.LookRotation(moveDir);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 15f);
+            }
         }
         else
         {
-            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+            if (isGrounded)
+            {
+                // 3. MADDE: İkinci Raycast silindi, merkezi 'isOnIce' kullanılıyor
+                if (isOnIce)
+                {
+                    float iceDeceleration = 0.1f;
+                    float targetX = Mathf.Lerp(rb.linearVelocity.x, 0f, Time.deltaTime * iceDeceleration);
+                    float targetZ = Mathf.Lerp(rb.linearVelocity.z, 0f, Time.deltaTime * iceDeceleration);
+                    
+                    rb.linearVelocity = new Vector3(targetX, rb.linearVelocity.y, targetZ);
+                }
+                else
+                {
+                    rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+                }
+            }
+            else
+            {
+                float airDampingSpeed = 3f; 
+                float targetX = Mathf.Lerp(rb.linearVelocity.x, 0f, Time.deltaTime * airDampingSpeed);
+                float targetZ = Mathf.Lerp(rb.linearVelocity.z, 0f, Time.deltaTime * airDampingSpeed);
+                rb.linearVelocity = new Vector3(targetX, rb.linearVelocity.y, targetZ);
+            }
         }
 
-        // --- UI DOSTU YUMRUK SİSTEMİ ---
+        // 4. MADDE: animator.transform.localRotation sıfırlama satırı buradan tamamen kaldırıldı!
+
+        // --- MOUSE / GAMEPAD PUNCH GİRDİSİ ---
         bool punchPressed = false;
-        
         if (UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame)
         {
             if (UnityEngine.EventSystems.EventSystem.current != null && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
@@ -212,7 +282,6 @@ public class PlayerController : NetworkBehaviour
                 punchPressed = true;
             }
         }
-            
         if (UnityEngine.InputSystem.Gamepad.current != null && UnityEngine.InputSystem.Gamepad.current.buttonWest.wasPressedThisFrame)
         {
             punchPressed = true;
@@ -223,11 +292,6 @@ public class PlayerController : NetworkBehaviour
             PunchActionServerRpc();
             nextPunchTime = Time.time + punchCooldown; 
         }
-
-        if (animator != null)
-        {
-            animator.transform.localRotation = Quaternion.Euler(0f, 0f, 0f);
-        }
     }
 
     private void UpdatePlayerVisuals()
@@ -237,12 +301,15 @@ public class PlayerController : NetworkBehaviour
             nameTagText.text = networkPlayerName.Value.ToString();
         }
 
-        Renderer[] renderers = GetComponentsInChildren<Renderer>();
-        foreach (var r in renderers)
+        // 2. MADDE: GetComponentsInChildren çağrısı silindi! Önbellekteki diziyi (cachedRenderers) dönüyoruz
+        if (cachedRenderers != null)
         {
-            if (r.gameObject.name != "Text (TMP)") 
+            foreach (var r in cachedRenderers)
             {
-                r.material.color = networkPlayerColor.Value;
+                if (r != null && r.gameObject.name != "Text (TMP)") 
+                {
+                    r.material.color = networkPlayerColor.Value;
+                }
             }
         }
     }
@@ -269,8 +336,6 @@ public class PlayerController : NetworkBehaviour
     private void PunchActionServerRpc()
     {
         Collider[] hitPlayers = Physics.OverlapSphere(punchPoint.position, punchRadius, playerLayer);
-        
-        // YENİ: Başlangıçta kimseye vuramadığımızı varsayıyoruz
         bool hasHitAnyPlayer = false;
 
         foreach (Collider hit in hitPlayers)
@@ -280,7 +345,6 @@ public class PlayerController : NetworkBehaviour
             PlayerController targetPlayer = hit.GetComponent<PlayerController>();
             if (targetPlayer != null)
             {
-                // MÜHÜR: Listede kendimiz hariç geçerli bir oyuncu bulduk, yani vuruş başarılı!
                 hasHitAnyPlayer = true; 
 
                 if (BaseMinigameManager.ActiveMinigame != null) 
@@ -291,17 +355,13 @@ public class PlayerController : NetworkBehaviour
                 targetPlayer.TakeHitServerRpc(knockbackDir * knockbackForce);
             }
         }
-
-        // GÜNCELLENDİ: İstemcilere animasyonu oynatmasını söylerken isabet bilgisini de gönderiyoruz
         PunchActionClientRpc(hasHitAnyPlayer);
     }
 
     [ClientRpc]
-    private void PunchActionClientRpc(bool hasHit) // YENİ: bool parametresi eklendi
+    private void PunchActionClientRpc(bool hasHit)
     {
         if (animator != null) animator.SetTrigger("Punch");
-
-        // GÜNCELLENDİ: Sunucudan gelen isabet bilgisine göre doğru ses efektini seçip çalıyoruz
         if (AudioManager.Instance != null)
         {
             AudioClip soundToPlay = hasHit ? AudioManager.Instance.punchHitSound : AudioManager.Instance.punchMissSound;
@@ -309,7 +369,7 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    [ServerRpc(RequireOwnership = false)]
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     public void TakeHitServerRpc(Vector3 force) => TakeHitClientRpc(force);
     
     [ClientRpc]
@@ -317,7 +377,20 @@ public class PlayerController : NetworkBehaviour
     {
         if (IsOwner)
         {
-            rb.AddForce(force, ForceMode.Impulse);
+            rb.linearVelocity = Vector3.zero;
+            Vector3 finalForce = force;
+
+            if (!isGrounded)
+            {
+                finalForce = force * 0.55f;
+            }
+            else
+            {
+                finalForce.y = jumpForce * 0.4f; 
+            }
+
+            rb.AddForce(finalForce, ForceMode.Impulse);
+            
             isStunned = true;
             stunTimer = stunDuration; 
             SetStunStateServerRpc(true);
@@ -361,11 +434,10 @@ public class PlayerController : NetworkBehaviour
             SetJumpTriggerServerRpc();
         }
     }
+    
     public void OnMobileJumpHeld()
     {
         if (!IsOwner || isStunned) return;
-        
-        // Zıplama süresi dolmuşsa ve yere değiyorsak zıpla
         if (isGrounded && Time.time >= nextJumpTime)
         {
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
@@ -386,7 +458,8 @@ public class PlayerController : NetworkBehaviour
 
     public override void OnNetworkDespawn()
     {
-        networkPlayerName.OnValueChanged -= (oldV, newV) => UpdatePlayerVisuals();
-        networkPlayerColor.OnValueChanged -= (oldV, newV) => UpdatePlayerVisuals();
+        // 1. MADDE: Karakter sahneden silindiğinde network eventlerinden TERTEMİZ ayrılıyoruz (Sıfır Sızıntı!)
+        networkPlayerName.OnValueChanged -= OnNameChanged;
+        networkPlayerColor.OnValueChanged -= OnColorChanged;
     }
 }

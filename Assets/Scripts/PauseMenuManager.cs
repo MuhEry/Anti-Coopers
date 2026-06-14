@@ -7,27 +7,25 @@ public class PauseMenuManager : MonoBehaviour
     [Header("UI Panelleri")]
     [Tooltip("Açılıp kapanacak olan asıl menü paneli (Arka plan, butonlar vs.)")]
     [SerializeField] private GameObject pausePanel;
+    
     [Header("Ses Arayüz Elemanları")]
     [SerializeField] private Slider musicSlider;
     [SerializeField] private Slider sfxSlider;
+    
     private bool isMenuOpen = false;
 
     private void Start()
     {
-        // Oyun başladığında menünün kesinlikle kapalı olduğundan emin ol
         if (pausePanel != null)
         {
             pausePanel.SetActive(false);
         }
-        // Sahne ilk açıldığında, hiyerarşideki AudioManager'ı otomatik olarak buluyoruz!
+        
         if (AudioManager.Instance != null)
         {
-            // 1. Slider'ların OnValueChanged olaylarını kod üzerinden (dinamik) bağlıyoruz
             if (musicSlider != null)
             {
-                // Önce eski eventleri temizle (çakışma olmasın)
                 musicSlider.onValueChanged.RemoveAllListeners();
-                // AudioManager'daki SetMusicVolume fonksiyonunu slider'a bağlıyoruz
                 musicSlider.onValueChanged.AddListener(AudioManager.Instance.SetMusicVolume);
             }
 
@@ -45,40 +43,59 @@ public class PauseMenuManager : MonoBehaviour
 
     private void Update()
     {
-        // PC'de ESC tuşuna basıldığında menüyü aç/kapat
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             ToggleMenu();
         }
     }
 
-    // Bu fonksiyonu mobil cihazlardaki bir 'Ayarlar/Duraklat' butonuna atayacağız
     public void ToggleMenu()
     {
         if (pausePanel == null) return;
 
         isMenuOpen = !isMenuOpen;
         pausePanel.SetActive(isMenuOpen);
+        
+        if (isMenuOpen)
+        {
+            UnlockCursor();
+        }
+        else
+        {
+            LockCursor();
+        }
 
-        // Not: Multiplayer oyunlarda Time.timeScale = 0f YAPILMAZ! 
-        // Çünkü ağ bağlantısı ve diğer oyuncular durdurulamaz. 
-        // Sadece menü görsel olarak açılır.
     }
 
-    // 'Devam Et' butonuna atanacak fonksiyon
     public void ResumeGame()
     {
         isMenuOpen = false;
         if (pausePanel != null) pausePanel.SetActive(false);
+        
+        // YENİ: Oyuna geri dönüldüğü için fareyi tekrar gizleyip kilitliyoruz
+        LockCursor();
     }
 
-    // 'Ana Menüye Dön' butonuna atanacak fonksiyon
     public void ReturnToMainMenu()
     {
-        // RelayManager'daki güvenli çıkış fonksiyonumuzu çağırıyoruz
+        // Menüden tamamen çıkıp ana lobiye döndüğümüz için farenin mutlaka serbest kalması gerekir
+        UnlockCursor();
+
         if (RelayManager.Instance != null)
         {
             RelayManager.Instance.LeaveLobby();
         }
+    }
+
+    private void LockCursor()
+    {
+        Cursor.lockState = CursorLockMode.Locked; // Fareyi merkeze çivile
+        Cursor.visible = false;                   // Kursörü gizle
+    }
+
+    private void UnlockCursor()
+    {
+        Cursor.lockState = CursorLockMode.None;   // Fareyi özgür bırak
+        Cursor.visible = true;                    // Kursörü görünür yap
     }
 }
