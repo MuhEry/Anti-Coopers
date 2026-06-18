@@ -2436,7 +2436,7 @@ MonoBehaviour:
   countdownText: {fileID: 1078965934}
   statusText: {fileID: 1862425097}
   spectatorCamera: {fileID: 1116506216}
-  roundDuration: 15
+  roundDuration: 10
   maxRounds: 5
 --- !u!1 &1231002304
 GameObject:
