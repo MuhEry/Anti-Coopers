@@ -6,7 +6,6 @@ public class KameraTakip : MonoBehaviour
 
     private void Start()
     {
-        // Sahnedeki ana kameranın transform bileşenini buluyoruz
         if (Camera.main != null)
         {
             mainCameraTransform = Camera.main.transform;
@@ -17,8 +16,7 @@ public class KameraTakip : MonoBehaviour
     {
         if (mainCameraTransform != null)
         {
-            // Objeyi (Canvas'ı) her zaman kameranın baktığı yöne çeviriyoruz
-            transform.LookAt(transform.position + mainCameraTransform.forward);
+            transform.rotation = mainCameraTransform.rotation;
         }
     }
 }

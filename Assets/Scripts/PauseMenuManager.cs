@@ -7,20 +7,18 @@ public class PauseMenuManager : MonoBehaviour
     [Header("UI Panelleri")]
     [Tooltip("Açılıp kapanacak olan asıl menü paneli (Arka plan, butonlar vs.)")]
     [SerializeField] private GameObject pausePanel;
-    
     [Header("Ses Arayüz Elemanları")]
     [SerializeField] private Slider musicSlider;
     [SerializeField] private Slider sfxSlider;
-    
     private bool isMenuOpen = false;
 
     private void Start()
     {
+        // Oyun başladığında menünün kesinlikle kapalı olduğundan emin ol
         if (pausePanel != null)
         {
             pausePanel.SetActive(false);
         }
-        
         if (AudioManager.Instance != null)
         {
             if (musicSlider != null)
@@ -55,47 +53,19 @@ public class PauseMenuManager : MonoBehaviour
 
         isMenuOpen = !isMenuOpen;
         pausePanel.SetActive(isMenuOpen);
-        
-        if (isMenuOpen)
-        {
-            UnlockCursor();
-        }
-        else
-        {
-            LockCursor();
-        }
-
     }
 
     public void ResumeGame()
     {
         isMenuOpen = false;
         if (pausePanel != null) pausePanel.SetActive(false);
-        
-        // YENİ: Oyuna geri dönüldüğü için fareyi tekrar gizleyip kilitliyoruz
-        LockCursor();
     }
 
     public void ReturnToMainMenu()
     {
-        // Menüden tamamen çıkıp ana lobiye döndüğümüz için farenin mutlaka serbest kalması gerekir
-        UnlockCursor();
-
         if (RelayManager.Instance != null)
         {
             RelayManager.Instance.LeaveLobby();
         }
-    }
-
-    private void LockCursor()
-    {
-        Cursor.lockState = CursorLockMode.Locked; // Fareyi merkeze çivile
-        Cursor.visible = false;                   // Kursörü gizle
-    }
-
-    private void UnlockCursor()
-    {
-        Cursor.lockState = CursorLockMode.None;   // Fareyi özgür bırak
-        Cursor.visible = true;                    // Kursörü görünür yap
     }
 }

@@ -1,80 +1,59 @@
-using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
-public class CrumblingTile : NetworkBehaviour // KURAL: NetworkBehaviour olmalı!
+public class CrumblingTile : MonoBehaviour
 {
-    [Header("Zaman Ayarları")]
-    [SerializeField] private float delayBeforeCrumble = 0.7f; 
-    
+    [SerializeField] private float delayBeforeCrumble = 1.3f;
+    public float DelayBeforeCrumble => delayBeforeCrumble;
+
     private MeshRenderer meshRenderer;
     private BoxCollider boxCollider;
+    private MaterialPropertyBlock propBlock;
     private bool isSteppedOn = false;
+    private int myIndex;
+    private TileManager manager;
 
-    private void Awake()
+    public void Init(int index, TileManager mgr)
     {
+        myIndex = index;
+        manager = mgr;
         meshRenderer = GetComponent<MeshRenderer>();
         boxCollider = GetComponent<BoxCollider>();
+        propBlock = new MaterialPropertyBlock();
     }
 
     private void OnCollisionEnter(Collision collision)
     {
-        // Sadece sunucu fizik işlemlerine karar verir
-        if (!IsServer) return;
+        if (!NetworkManager.Singleton.IsServer) return;
+        if (isSteppedOn) return;
 
-        // Karakterin Tag'inin "Player" olduğundan emin ol!
-        if (collision.gameObject.CompareTag("Player") && !isSteppedOn)
+        if (collision.gameObject.CompareTag("Player"))
         {
             isSteppedOn = true;
-            
-            // Tüm istemcilerde karonun rengini kırmızı yap
-            StartCrumbleClientRpc();
-            
-            // Sunucuda kırılma zamanlamasını başlat
-            StartCoroutine(CrumbleRoutine());
+            manager.RequestCrumble(myIndex);
         }
     }
 
-    [ClientRpc]
-    private void StartCrumbleClientRpc()
+    public void ShowWarning()
     {
-        if (meshRenderer != null) meshRenderer.material.color = Color.red;
+        meshRenderer.GetPropertyBlock(propBlock);
+        propBlock.SetColor("_BaseColor", Color.red); // URP rengi
+        meshRenderer.SetPropertyBlock(propBlock);
     }
 
-    private IEnumerator CrumbleRoutine()
+    public void Hide()
     {
-        yield return new WaitForSeconds(delayBeforeCrumble);
-        
-        // Karoyu tamamen gizle ve collider'ını kapat
-        HideTileClientRpc();
+        meshRenderer.enabled = false;
+        boxCollider.enabled = false;
     }
 
-    [ClientRpc]
-    private void HideTileClientRpc()
-    {
-        if (meshRenderer != null) meshRenderer.enabled = false;
-        if (boxCollider != null) boxCollider.enabled = false;
-    }
-
-    public void ResetTile()
+    public void ResetLocal()
     {
         isSteppedOn = false;
-        if (IsServer)
-        {
-            // Eğer harita sıfırlanacaksa tüm ağda geri açma emri gönderilebilir
-            ResetTileClientRpc();
-        }
-    }
-
-    [ClientRpc]
-    private void ResetTileClientRpc()
-    {
-        isSteppedOn = false;
-        if (meshRenderer != null)
-        {
-            meshRenderer.enabled = true;
-            meshRenderer.material.color = Color.white; 
-        }
-        if (boxCollider != null) boxCollider.enabled = true;
+        meshRenderer.enabled = true;
+        boxCollider.enabled = true;
+        meshRenderer.GetPropertyBlock(propBlock);
+        propBlock.SetColor("_BaseColor", Color.white);
+        meshRenderer.SetPropertyBlock(propBlock);
     }
 }

@@ -101,7 +101,7 @@ public class ThirdPersonCamera : NetworkBehaviour
         Vector3 dir = (desiredPosition - pivotPoint).normalized;
         float dist = Vector3.Distance(pivotPoint, desiredPosition);
 
-        if (Physics.SphereCast(pivotPoint, collisionRadius, dir, out RaycastHit hit, dist, collisionMask))
+        if (Physics.SphereCast(pivotPoint, collisionRadius, dir, out RaycastHit hit, dist, collisionMask, QueryTriggerInteraction.Ignore))
             finalPosition = hit.point + hit.normal * collisionRadius;
 
         cam.transform.position = finalPosition;
