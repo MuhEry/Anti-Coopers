@@ -67,7 +67,7 @@ public class MinigameRaceManager : BaseMinigameManager
             yield return new WaitForSeconds(1f);
         }
 
-        ShowCountdownClientRpc("Başla!", true);
+        ShowCountdownClientRpc("START!", true);
         yield return new WaitForSeconds(0.8f);
         HideCountdownClientRpc();
 
@@ -105,7 +105,7 @@ public class MinigameRaceManager : BaseMinigameManager
     private void UpdateTimerUI(float oldVal, float newVal)
     {
         if (timerText != null)
-            timerText.text = $"SÜRE: {Mathf.CeilToInt(newVal)}s";
+            timerText.text = $"TIME: {Mathf.CeilToInt(newVal)}s";
     }
 
     public override void PlayerFinished(ulong clientId)
@@ -129,8 +129,8 @@ public class MinigameRaceManager : BaseMinigameManager
         {
             finishedStatusText.gameObject.SetActive(true);
             finishedStatusText.text =
-                $"<color=green>BİTİŞ ÇİZGİSİNE ULAŞILDI!</color>\n" +
-                $"<color=yellow>+{score} puan kazandın!</color>\n";
+                $"<color=green>FINISH LINE ACHIEVED!</color>\n" +
+                $"<color=yellow>+{score} points!</color>\n";
         }
     }
 

@@ -36,7 +36,7 @@ public class MinigameColorConquestManager : BaseMinigameManager
         }
 
         timeRemaining.OnValueChanged += (oldV, newV) => {
-            if (timerText != null) timerText.text = $"SÜRE: {Mathf.CeilToInt(newV)}s";
+            if (timerText != null) timerText.text = $"TIME: {Mathf.CeilToInt(newV)}s";
         };
 
         if (statusText != null) statusText.gameObject.SetActive(false);
@@ -117,7 +117,7 @@ public class MinigameColorConquestManager : BaseMinigameManager
             ShowMyEndScoreClientRpc(kvp.Key, rawTiles, finalCalculatedScore);
         }
 
-        UpdateCountdownClientRpc("SÜRE BİTTİ!");
+        UpdateCountdownClientRpc("TIME'S UP!");
         StartCoroutine(DelayedEnd());
     }
 
@@ -140,7 +140,7 @@ public class MinigameColorConquestManager : BaseMinigameManager
                 statusText.gameObject.SetActive(true);
                 
                 // Oyuncuya kaç karo boyadığını ve matematiksel olarak aldığı nihai int puanı gösteriyoruz
-                statusText.text = $"<color=yellow>{tileCount} KARO BOYADIN!</color>\n<size=50><color=green>+{earnedScore} Puan</color></size>";
+                statusText.text = $"<color=yellow>{tileCount} TILES PAINTED!</color>\n<size=50><color=green>+{earnedScore} Points</color></size>";
             }
         }
     }

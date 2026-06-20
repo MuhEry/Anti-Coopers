@@ -157,8 +157,6 @@ public class RelayManager : MonoBehaviour
 
         UpdatePlaylistUI();
         UpdatePlayerListUI();
-
-        if (lobbyCodeText != null) lobbyCodeText.text = "Yeni oyun için harita seçin";
     }
 
     private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
@@ -166,14 +164,14 @@ public class RelayManager : MonoBehaviour
         if (isGameInProgress)
         {
             response.Approved = false;
-            response.Reason = "Oyun zaten başladı!";
+            response.Reason = "Game has already started!";
             return;
         }
 
         if (clientSlots.Count >= 8)
         {
             response.Approved = false;
-            response.Reason = "Oda şu an tam kapasite (8/8) dolu!";
+            response.Reason = "Room is currently at full capacity (8/8)!";
             return;
         }
 
@@ -231,7 +229,7 @@ public class RelayManager : MonoBehaviour
             if (!isIntentionallyLeaving)
             {
                 string reason = NetworkManager.Singleton.DisconnectReason;
-                if (string.IsNullOrEmpty(reason)) reason = "Odaya bağlanılamadı. Oda kapanmış veya kod geçersiz.";
+                if (string.IsNullOrEmpty(reason)) reason = "Failed to connect to the room. The room may be closed or the code is invalid.";
                 ShowError(reason);
                 LeaveLobby();
             }
@@ -247,7 +245,7 @@ public class RelayManager : MonoBehaviour
         if (errorText != null)
         {
             errorText.gameObject.SetActive(true);
-            errorText.text = $"<color=red>BİLGİ:</color> {message}";
+            errorText.text = $"<color=red>INFO:</color> {message}";
             CancelInvoke(nameof(HideError));
             Invoke(nameof(HideError), 4f); 
         }
@@ -311,7 +309,7 @@ public class RelayManager : MonoBehaviour
                 NetworkManager.Singleton.SceneManager.OnLoadEventCompleted -= OnSceneLoadCompleted;
                 NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadCompleted;
 
-                if (lobbyCodeText != null) lobbyCodeText.text = "ODA KODU: " + joinCode;
+                if (lobbyCodeText != null) lobbyCodeText.text = "ROOM CODE: " + joinCode;
                 if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
                 if (lobbyPanel != null) lobbyPanel.SetActive(true);
                 if (hostMapSelectionPanel != null) hostMapSelectionPanel.SetActive(true);
@@ -339,7 +337,7 @@ public class RelayManager : MonoBehaviour
             
             if (string.IsNullOrWhiteSpace(joinCode))
             {
-                ShowError("Geçersiz kod!");
+                ShowError("Invalid code!");
                 return;
             }
 
@@ -356,14 +354,14 @@ public class RelayManager : MonoBehaviour
                 RelayServerData relayServerData = new RelayServerData(joinAllocation, connectionType);
                 transport.SetRelayServerData(relayServerData);
                 
-                ShowError("Odaya bağlanılıyor, lütfen bekleyin...");
+                ShowError("Connecting to the room, please wait...");
                 NetworkManager.Singleton.StartClient();
-                if (lobbyCodeText != null) lobbyCodeText.text = "ODA KODU: " + joinCode;
+                if (lobbyCodeText != null) lobbyCodeText.text = "ROOM CODE: " + joinCode;
             }
         }
         catch (System.Exception) 
         { 
-            ShowError("Geçersiz kod! Oda bulunamadı veya internet bağlantınız koptu."); 
+            ShowError("Invalid code! Room not found or your internet connection is down."); 
         }
     }
 
@@ -373,12 +371,12 @@ public class RelayManager : MonoBehaviour
 
         LobbyPlayer[] players = FindObjectsByType<LobbyPlayer>(FindObjectsSortMode.None);
         bool allReady = true;
-        playerListText.text = "ODADAKİ OYUNCULAR:\n";
+        playerListText.text = "PLAYERS IN THE ROOM:\n";
         savedPlayerData.Clear();
 
         foreach (LobbyPlayer player in players)
         {
-            string readyStatus = player.isReady.Value ? "<color=green>[HAZIR]</color>" : "<color=red>[BEKLİYOR]</color>";
+            string readyStatus = player.isReady.Value ? "<color=green>[READY]</color>" : "<color=red>[WAITING]</color>";
             playerListText.text += $"- {player.playerName.Value} {readyStatus}\n";
             if (!player.isReady.Value) allReady = false;
 
@@ -438,7 +436,7 @@ public class RelayManager : MonoBehaviour
     private void UpdatePlaylistUI()
     {
         if (playlistText == null) return;
-        playlistText.text = "OYNATMA LİSTESİ:\n";
+        playlistText.text = "PLAYLIST:\n";
         for (int i = 0; i < gamePlaylist.Count; i++)
         {
             playlistText.text += $"{i + 1}. {gamePlaylist[i]}\n";
@@ -503,7 +501,8 @@ public class RelayManager : MonoBehaviour
             }
             else
             {
-                LeaveLobby();
+                isReturningToLobby = true;
+                NetworkManager.Singleton.SceneManager.LoadScene("MainMenu", UnityEngine.SceneManagement.LoadSceneMode.Single);
             }
         }
     }
@@ -517,7 +516,7 @@ public class RelayManager : MonoBehaviour
             // Güvenlik Duvarı: Prefab yoksa çökmesin
             if (gamePlayerPrefab == null) 
             { 
-                Debug.LogError("[RelayManager] HATA: gamePlayerPrefab atanmamış! Karakterler doğamaz."); 
+                Debug.LogError("[RelayManager] ERROR: gamePlayerPrefab atanmamış! Karakterler doğamaz."); 
                 return; 
             }
 

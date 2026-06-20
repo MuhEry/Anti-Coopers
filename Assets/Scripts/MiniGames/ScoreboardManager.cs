@@ -18,7 +18,7 @@ public class ScoreboardManager : NetworkBehaviour
         {
             // 1. Host paneli ayarları
             if (hostNextButton != null) hostNextButton.SetActive(true);
-            if (statusText != null) statusText.text = "Hazır olduğunuzda sıradaki oyunu başlatabilirsiniz.";
+            if (statusText != null) statusText.text = "You can start the next game when you're ready.";
 
             // 2. Ağ verilerini topla (Sadece sunucu görebilir)
             var connectedIds = NetworkManager.Singleton.ConnectedClientsIds.ToArray();
@@ -39,7 +39,7 @@ public class ScoreboardManager : NetworkBehaviour
         {
             // Misafir oyuncu ayarları
             if (hostNextButton != null) hostNextButton.SetActive(false);
-            if (statusText != null) statusText.text = "Kurucunun sıradaki oyunu başlatması bekleniyor...";
+            if (statusText != null) statusText.text = "Waiting for the host to start the next game...";
         }
     }
 
@@ -51,27 +51,27 @@ public class ScoreboardManager : NetworkBehaviour
         {
             if (currentMatch >= totalMatches)
             {
-                matchInfoText.text = "<color=red><b>TÜM OYUNLAR BİTTİ!</b></color>";
+                matchInfoText.text = "<color=red><b>ALL GAMES ARE DONE!</b></color>";
                 
                 // Durum yazılarını oyunun bittiğine göre revize et
                 if (statusText != null)
                 {
                     statusText.text = IsHost 
-                        ? "Butona basarak oynunuzu sonlandırabilirsiniz." 
-                        : "Kurucunun oyunu sonlandırması bekleniyor...";
+                        ? "You can end your game by pressing the button." 
+                        : "Waiting for the host to end the game...";
                 }
             }
             else
             {
                 int remainingGames = totalMatches - currentMatch;
-                matchInfoText.text = $"Oynanan Bölüm: {currentMatch} / {totalMatches}  |  <color=green>Kalan Bölüm: {remainingGames}</color>";
+                matchInfoText.text = $"Current Match: {currentMatch} / {totalMatches}  |  <color=green>Remaining Matches: {remainingGames}</color>";
             }
         }
 
         // B. Skor Tablosunu Oluşturma (Gelen verileri büyükten küçüğe sırala)
         if (scoreboardText == null || RelayManager.Instance == null) return;
 
-        scoreboardText.text = "<color=yellow>GÜNCEL SKOR DURUMU</color>\n\n";
+        scoreboardText.text = "<color=yellow>CURRENT SCORE STATUS</color>\n\n";
 
         List<(ulong id, int score)> playerDataList = new List<(ulong, int)>();
         for (int i = 0; i < playerIds.Length; i++)
@@ -84,7 +84,7 @@ public class ScoreboardManager : NetworkBehaviour
         int rank = 1;
         foreach (var player in sortedPlayers)
         {
-            string pName = "Oyuncu " + player.id;
+            string pName = "Player " + player.id;
             string colorHex = "#FFFFFF";
 
             if (RelayManager.Instance.GetMySavedData(player.id, out string savedName, out Color32 color))
@@ -93,7 +93,7 @@ public class ScoreboardManager : NetworkBehaviour
                 colorHex = ColorUtility.ToHtmlStringRGB(color);
             }
 
-            scoreboardText.text += $"{rank}. <color=#{colorHex}>{pName}</color>  {player.score} Puan\n";
+            scoreboardText.text += $"{rank}. <color=#{colorHex}>{pName}</color>  {player.score} Points\n";
             rank++;
         }
     }

@@ -39,13 +39,13 @@ public class MinigameCrownManager : BaseMinigameManager
             StartCoroutine(StartCountdown());
             StartCoroutine(PointTick()); // Puan verme döngüsü
         }
-        timeRemaining.OnValueChanged += (oldV, newV) => timerText.text = $"SÜRE: {Mathf.CeilToInt(newV)}s";
+        timeRemaining.OnValueChanged += (oldV, newV) => timerText.text = $"TIME: {Mathf.CeilToInt(newV)}s";
     }
 
     private IEnumerator StartCountdown()
     {
         for (int i = 5; i > 0; i--) { ShowUIClientRpc(i.ToString(), false); yield return new WaitForSeconds(1f); }
-        ShowUIClientRpc("TACI ELE GEÇİR!", true);
+        ShowUIClientRpc("GRAB THE GOLD!", true);
         yield return new WaitForSeconds(1f);
         statusText.gameObject.SetActive(false);
         gameStarted.Value = true;
@@ -84,7 +84,7 @@ public class MinigameCrownManager : BaseMinigameManager
                 timeRemaining.Value -= 1f;
                 // Kral hayattaysa her saniye 2 puan kazanır
                 if (currentKingId.Value != 99999)
-                    RelayManager.Instance.AddScore(currentKingId.Value, 2);
+                    RelayManager.Instance.AddScore(currentKingId.Value, 1);
             }
         }
         gameStarted.Value = false;
@@ -131,7 +131,7 @@ public class MinigameCrownManager : BaseMinigameManager
     {
         // İsmi RelayManager'dan çekebiliriz
         statusText.gameObject.SetActive(true);
-        statusText.text = $"<color=yellow>YENİ KRAL BELİRLENDİ!</color>";
+        statusText.text = $"<color=yellow>NEW KING SELECTED!</color>";
         Invoke(nameof(HideStatus), 1.5f);
     }
 

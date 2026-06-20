@@ -72,7 +72,7 @@ public class MinigameLavaManager : BaseMinigameManager
             yield return new WaitForSeconds(1f);
         }
 
-        ShowCountdownClientRpc("HAYATTA KAL!", true);
+        ShowCountdownClientRpc("STAY ALIVE!", true);
         yield return new WaitForSeconds(0.8f);
         HideCountdownClientRpc();
         
@@ -95,7 +95,7 @@ public class MinigameLavaManager : BaseMinigameManager
     private void UpdateTimerUI(float oldVal, float newVal)
     {
         if (timerText != null)
-            timerText.text = $"SÜRE: {Mathf.CeilToInt(newVal)}s";
+            timerText.text = $"TIME: {Mathf.CeilToInt(newVal)}s";
     }
 
     public override void PlayerEliminated(ulong clientId)
@@ -160,7 +160,7 @@ public class MinigameLavaManager : BaseMinigameManager
             if (statusText != null)
             {
                 statusText.gameObject.SetActive(true);
-                statusText.text = $"<color=red>ELENDİN!</color>\n<size=40>+{score} Puan</size>";
+                statusText.text = $"<color=red>YOU ARE ELIMINATED!</color>\n<size=40>+{score} Points</size>";
             }
 
             // 3. KAMERA GARANTİSİ: İsimle aramak yerine sahnede çalışan tüm oyuncu kameralarını zorla kapatıyoruz
@@ -187,7 +187,7 @@ public class MinigameLavaManager : BaseMinigameManager
             if (statusText != null)
             {
                 statusText.gameObject.SetActive(true);
-                statusText.text = $"<color=yellow>SON KALAN SENSİN!</color>\n<size=40>+{maxScore} PUAN</size>";
+                statusText.text = $"<color=yellow>YOU ARE THE LAST ONE STANDING!</color>\n<size=40>+{maxScore} POINTS</size>";
             }
         }
     }
