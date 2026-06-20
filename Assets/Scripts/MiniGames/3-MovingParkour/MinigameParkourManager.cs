@@ -30,7 +30,6 @@ public class MinigameParkourManager : BaseMinigameManager
     private bool gameEnded = false;
     private HashSet<ulong> finishedPlayers = new HashSet<ulong>();
     
-    // SİHİRLİ LİSTE: Her oyuncunun (ulong) hangi noktaları (int) aldığını tutar
     private Dictionary<ulong, HashSet<int>> playerProgress = new Dictionary<ulong, HashSet<int>>();
 
     protected override void Awake()
@@ -65,7 +64,7 @@ public class MinigameParkourManager : BaseMinigameManager
             yield return new WaitForSeconds(1f);
         }
 
-        ShowCountdownClientRpc("BAŞLA!", true);
+        ShowCountdownClientRpc("GO!", true);
         yield return new WaitForSeconds(0.8f);
         HideCountdownClientRpc();
         
@@ -82,78 +81,61 @@ public class MinigameParkourManager : BaseMinigameManager
         }
         if (!gameEnded) EndGame();
     }
-    // Evrensel bitiş çizgisinden gelen haberi yakalıyoruz
     public override void PlayerFinished(ulong clientId)
     {
-        if (!IsServer) return;
+        if (!IsServer || gameEnded || finishedPlayers.Contains(clientId)) return;
 
-        if (!finishedPlayers.Contains(clientId))
+        finishedPlayers.Add(clientId);
+        RelayManager.Instance.AddScore(clientId, 15);
+        NotifyScoreClientRpc(clientId, 15, -1);
+
+        int totalConnectedPlayers = NetworkManager.Singleton.ConnectedClients.Count;
+
+        if (finishedPlayers.Count >= totalConnectedPlayers)
         {
-            finishedPlayers.Add(clientId);
-
-            // Bitiş çizgisine ulaşana ekstra final puanı verelim
-            RelayManager.Instance.AddScore(clientId, 15);
-
-            // Odadaki toplam oyuncu sayısını al
-            int totalConnectedPlayers = NetworkManager.Singleton.ConnectedClients.Count;
-
-            // Eğer bitirenlerin sayısı, odadaki oyuncu sayısına eşit veya büyükse oyunu bitir!
-            if (finishedPlayers.Count >= totalConnectedPlayers)
-            {
-                // Senin kodundaki oyunu bitirme fonksiyonunun adı neyse onu çağır
-                // Muhtemelen EndGame() veya benzeri bir isimdir.
-                EndGame(); 
-            }
+            EndGame(); 
         }
     }
 
     private void UpdateTimerUI(float oldVal, float newVal)
     {
         if (timerText != null)
-            timerText.text = $"SÜRE: {Mathf.CeilToInt(newVal)}s";
+            timerText.text = $"TIME: {Mathf.CeilToInt(newVal)}s";
     }
 
-    // Puan Noktası (ParkourPoint) nesnesinden çağrılır
     public bool PlayerCollectedPoint(ulong clientId, int pointId)
     {
         if (!IsServer || gameEnded || !gameStarted.Value) return false;
 
-        // Oyuncu listede yoksa kaydını oluştur
         if (!playerProgress.ContainsKey(clientId))
         {
             playerProgress[clientId] = new HashSet<int>();
         }
 
-        // Eğer oyuncu bu noktayı DAHA ÖNCE ALMADIYSA
         if (!playerProgress[clientId].Contains(pointId))
         {
-            // Noktayı oyuncunun siciline "Alındı" olarak ekle
             playerProgress[clientId].Add(pointId);
             
-            // RelayManager üzerinden ana skoruna +10 puan ekle
             RelayManager.Instance.AddScore(clientId, pointsPerStage);
-            
-            // Oyuncunun kendi ekranında "+10 Puan" yazısını çıkart
+     
             NotifyScoreClientRpc(clientId, pointsPerStage, pointId);
             
-            return true; // Başarıyla alındı
+            return true;
         }
 
-        return false; // Zaten alınmış
+        return false;
     }
 
     [ClientRpc]
     private void NotifyScoreClientRpc(ulong targetClientId, int scoreAmount, int stageId)
     {
-        // Bu mesaj sadece puanı alan kişinin ekranında çıkar
         if (NetworkManager.Singleton.LocalClientId == targetClientId)
         {
             if (statusText != null)
             {
                 statusText.gameObject.SetActive(true);
-                statusText.text = $"<color=yellow>+{scoreAmount} PUAN";
+                statusText.text = $"<color=yellow>+{scoreAmount}";
                 
-                // 2 saniye sonra yazıyı ekrandan sil
                 CancelInvoke(nameof(HideStatusText));
                 Invoke(nameof(HideStatusText), 2f);
             }
@@ -169,7 +151,7 @@ public class MinigameParkourManager : BaseMinigameManager
     {
         if (!IsServer || gameEnded) return;
         gameEnded = true;
-        gameStarted.Value = false; // Hareketi durdur
+        gameStarted.Value = false;
         
         RelayManager.Instance.LoadNextMinigame();
     }

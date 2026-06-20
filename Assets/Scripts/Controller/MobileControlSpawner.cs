@@ -6,19 +6,25 @@ public class MobileControlSpawner : MonoBehaviour
     [SerializeField] private GameObject mobileControlsPrefab;
 
     [Header("Geliştirici Ayarı")]
-    [SerializeField] private bool forceShowInEditor = false; // Editörde test edebilmek için hile butonu
+    [SerializeField] private bool forceShowInEditor = false;
+
+    // Statik bayrak — oyun ömrü boyunca sadece BİR KEZ spawn olur
+    private static bool hasSpawned = false;
 
     private void Awake()
     {
-        // 1. Durum: Unity Editöründeyiz ama "Zorla Göster" tıkı açık (PC'de test etmek için)
+        if (hasSpawned)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         if (Application.isEditor && forceShowInEditor)
         {
             SpawnMobileControls();
             return;
         }
 
-        // 2. Durum: Gerçek platform kontrolleri
-        // Gerçek bir mobil cihazda (Android/iOS) veya WebGL üzerinden dokunmatik bir cihazda açıldıysa
         if (Application.isMobilePlatform || 
             SystemInfo.deviceType == DeviceType.Handheld)
         {
@@ -26,7 +32,6 @@ public class MobileControlSpawner : MonoBehaviour
         }
         else
         {
-            // Eğer PC/Mac veya konsol ise bu spawner nesnesi kendini yok eder, belleği yormaz
             Destroy(gameObject);
         }
     }
@@ -35,17 +40,16 @@ public class MobileControlSpawner : MonoBehaviour
     {
         if (mobileControlsPrefab != null)
         {
-            // Prefab'ı sahneye doğuruyoruz
             GameObject spawnedUI = Instantiate(mobileControlsPrefab);
-            
-            // Sahne değiştiğinde kontrollerin silinmemesini garantiye alıyoruz
             DontDestroyOnLoad(spawnedUI);
-            
+
+            hasSpawned = true; // Mühürle — bir daha asla spawn olmasın
+
             Debug.Log("<color=cyan>[MobileSpawner]:</color> Mobil kontroller başarıyla sahneye yüklendi.");
         }
         else
         {
-            Debug.LogError("<color=red>[MobileSpawner]:</color> Mobil Kontrol Prefab'ı slotu boş! Lütfen atama yapın.");
+            Debug.LogError("<color=red>[MobileSpawner]:</color> Mobil Kontrol Prefab'ı slotu boş!");
         }
     }
 }

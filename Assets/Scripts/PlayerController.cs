@@ -10,6 +10,10 @@ public class PlayerController : NetworkBehaviour
     [SerializeField] private float jumpForce = 6f; 
     [SerializeField] private Animator animator;
 
+    [Header("Kamera Ayarları")]
+    // 🎥 YENİ: Her oyuncunun kendi içindeki kamerayı tutacağı referans slotu
+    [SerializeField] private GameObject myLocalCamera; 
+
     [Header("Vurma Ayarları")]
     [SerializeField] private Transform punchPoint; 
     [SerializeField] private float punchRadius = 1.2f;
@@ -40,12 +44,11 @@ public class PlayerController : NetworkBehaviour
     
     private float nextPunchTime = 0f; 
     private bool isGrounded = true;   
-    private bool isOnIce = false; // 3. MADDE: Tek bir merkezi buz kontrol değişkeni
+    private bool isOnIce = false; 
     private Transform cameraTransform;
     private float nextJumpTime = 0f;
     private float jumpCooldown = 0.25f;
 
-    // 2. MADDE: Performans için Renderer Önbelleği (Cache)
     private Renderer[] cachedRenderers;
 
     private void Start()
@@ -58,7 +61,6 @@ public class PlayerController : NetworkBehaviour
             rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
         }
 
-        // 4. MADDE: animator.transform.localRotation her frame çalışıyordu, sadece Start'ta kalması yeterli.
         if (animator != null)
         {
             animator.transform.localRotation = Quaternion.Euler(0, 0, 0); 
@@ -67,26 +69,27 @@ public class PlayerController : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        // 2. MADDE: Sahneye doğunca renderer bileşenlerini bir kereye mahsus hafızaya alıyoruz (Sıfır GC Allocation)
         cachedRenderers = GetComponentsInChildren<Renderer>();
 
-        // 1. MADDE: Event Sızıntısını (Leak) önlemek için adlandırılmış metotlarla (Named Methods) abonelik
         networkPlayerName.OnValueChanged += OnNameChanged;
         networkPlayerColor.OnValueChanged += OnColorChanged;
         
         UpdatePlayerVisuals();
 
-        if (IsOwner)
+        // 🚀 KESİN ÇÖZÜM: Kamera Yönetimi
+        // Eğer karakter bu ekranın sahibine (IsOwner) aitse kamerasını açıyoruz, başkasınaysa kapatıyoruz.
+        if (myLocalCamera != null)
         {
-            var vCam = FindFirstObjectByType<Unity.Cinemachine.CinemachineCamera>();
-            if (vCam != null)
+            myLocalCamera.SetActive(IsOwner);
+            
+            // Hareket yönünün kameraya göre hesaplanabilmesi için kameranın transform referansını alıyoruz
+            if (IsOwner)
             {
-                vCam.Follow = transform;
+                cameraTransform = myLocalCamera.transform;
             }
         }
     }
 
-    // 1. MADDE İÇİN YENİ METOTLAR:
     private void OnNameChanged(FixedString32Bytes oldV, FixedString32Bytes newV) => UpdatePlayerVisuals();
     private void OnColorChanged(Color oldV, Color newV) => UpdatePlayerVisuals();
 
@@ -128,7 +131,6 @@ public class PlayerController : NetworkBehaviour
             isGrounded = Physics.CheckSphere(groundCheckPoint.position, groundCheckRadius, groundLayer);
         }
 
-        // 3. MADDE: İki ayrı yerdeki Raycast'i teke indirip Update başında bir kere hesaplıyoruz
         if (isGrounded)
         {
             RaycastHit hit;
@@ -198,13 +200,10 @@ public class PlayerController : NetworkBehaviour
         {
             inputDir.Normalize();
             
-            if (cameraTransform == null)
+            // Eğer OnNetworkSpawn'da kamera referansı kaçtıysa alternatif güvenlik kontrolü
+            if (cameraTransform == null && myLocalCamera != null)
             {
-                var tpCam = GetComponent<ThirdPersonCamera>();
-                if (tpCam != null && tpCam.CameraTransform != null)
-                    cameraTransform = tpCam.CameraTransform;
-                else if (Camera.main != null)
-                    cameraTransform = Camera.main.transform;
+                cameraTransform = myLocalCamera.transform;
             }
 
             Vector3 moveDir = inputDir;
@@ -224,7 +223,6 @@ public class PlayerController : NetworkBehaviour
 
             Vector3 targetVelocity = new Vector3(moveDir.x * moveSpeed, rb.linearVelocity.y, moveDir.z * moveSpeed);
 
-            // 3. MADDE: Artık yerel Raycast yerine yukarıda güncellenen merkezi 'isOnIce' kontrolünü kullanıyor
             if (isOnIce)
             {
                 float iceAcceleration = 0.2f;
@@ -248,7 +246,6 @@ public class PlayerController : NetworkBehaviour
         {
             if (isGrounded)
             {
-                // 3. MADDE: İkinci Raycast silindi, merkezi 'isOnIce' kullanılıyor
                 if (isOnIce)
                 {
                     float iceDeceleration = 0.1f;
@@ -270,8 +267,6 @@ public class PlayerController : NetworkBehaviour
                 rb.linearVelocity = new Vector3(targetX, rb.linearVelocity.y, targetZ);
             }
         }
-
-        // 4. MADDE: animator.transform.localRotation sıfırlama satırı buradan tamamen kaldırıldı!
 
         // --- MOUSE / GAMEPAD PUNCH GİRDİSİ ---
         bool punchPressed = false;
@@ -301,7 +296,6 @@ public class PlayerController : NetworkBehaviour
             nameTagText.text = networkPlayerName.Value.ToString();
         }
 
-        // 2. MADDE: GetComponentsInChildren çağrısı silindi! Önbellekteki diziyi (cachedRenderers) dönüyoruz
         if (cachedRenderers != null)
         {
             foreach (var r in cachedRenderers)
@@ -458,7 +452,6 @@ public class PlayerController : NetworkBehaviour
 
     public override void OnNetworkDespawn()
     {
-        // 1. MADDE: Karakter sahneden silindiğinde network eventlerinden TERTEMİZ ayrılıyoruz (Sıfır Sızıntı!)
         networkPlayerName.OnValueChanged -= OnNameChanged;
         networkPlayerColor.OnValueChanged -= OnColorChanged;
     }

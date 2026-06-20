@@ -41,7 +41,7 @@ public class RelayManager : MonoBehaviour
     
     private Dictionary<ulong, int> clientSlots = new Dictionary<ulong, int>();
     private bool isGameInProgress = false; 
-    private bool isIntentionallyLeaving = false; // YENİ: Ağ çökmelerini engelleyen mühür
+    private bool isIntentionallyLeaving = false; 
 
     private List<string> gamePlaylist = new List<string>();
     private bool showingScoreboard = false;
@@ -53,31 +53,33 @@ public class RelayManager : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            // SİHİRLİ UI TAMİRCİSİ V2: Eski (orijinal) menajeri yaşatıyoruz!
-            // Yeni sahne yüklendiğinde gelen taze Arayüz objelerini, hayatta kalan eski menajere devrediyoruz.
-            Instance.mainMenuPanel = this.mainMenuPanel;
-            Instance.lobbyPanel = this.lobbyPanel;
-            Instance.hostMapSelectionPanel = this.hostMapSelectionPanel;
-            Instance.codeInputField = this.codeInputField;
-            Instance.nicknameInputField = this.nicknameInputField;
-            Instance.lobbyCodeText = this.lobbyCodeText;
-            Instance.playerListText = this.playerListText;
-            Instance.startGameButton = this.startGameButton;
-            Instance.mapDropdown = this.mapDropdown;
-            Instance.playlistText = this.playlistText;
-            Instance.errorText = this.errorText;
+            // 🚀 BÜYÜK DÜZELTME 1: UI Çalınma Koruması ApprovalCheck
+            // Eğer yanlışlıkla MiniGame sahnesine bir RelayManager koyduysan, ana menüyü bozmasını engeller!
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "MainMenu")
+            {
+                Instance.mainMenuPanel = this.mainMenuPanel;
+                Instance.lobbyPanel = this.lobbyPanel;
+                Instance.hostMapSelectionPanel = this.hostMapSelectionPanel;
+                Instance.codeInputField = this.codeInputField;
+                Instance.nicknameInputField = this.nicknameInputField;
+                Instance.lobbyCodeText = this.lobbyCodeText;
+                Instance.playerListText = this.playerListText;
+                Instance.startGameButton = this.startGameButton;
+                Instance.mapDropdown = this.mapDropdown;
+                Instance.playlistText = this.playlistText;
+                Instance.errorText = this.errorText;
 
-            if (Instance.isReturningToLobby)
-            {
-                Instance.ShowLobbyAfterReturn();
-                Instance.isReturningToLobby = false;
-            }
-            else
-            {
-                Instance.ResetUIToMainMenu();
+                if (Instance.isReturningToLobby)
+                {
+                    Instance.ShowLobbyAfterReturn();
+                    Instance.isReturningToLobby = false;
+                }
+                else
+                {
+                    Instance.ResetUIToMainMenu();
+                }
             }
             
-            // Yeni doğan içi boş kopyayı yok et ki çakışma olmasın
             Destroy(gameObject); 
             return;
         }
@@ -88,10 +90,7 @@ public class RelayManager : MonoBehaviour
 
     async void Start()
     {
-        // Oyun çalışırken telefon ekranının kararmasını ve uykuya geçmesini engeller
         Screen.sleepTimeout = SleepTimeout.NeverSleep;
-        
-        // Oyun arka plana atılsa bile (kısa süreliğine) çalışmaya devam etmesini söyler
         Application.runInBackground = true;
         
         if (Instance == this)
@@ -101,7 +100,11 @@ public class RelayManager : MonoBehaviour
             if (NetworkManager.Singleton != null)
             {
                 NetworkManager.Singleton.ConnectionApprovalCallback = ApprovalCheck;
+                // Olası Event sızıntılarını (Leak) önlemek için önce çıkarıp sonra ekliyoruz
+                NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnect;
                 NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnect;
+                
+                NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
                 NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
             }
 
@@ -124,7 +127,6 @@ public class RelayManager : MonoBehaviour
         }
     }
 
-    // YENİ: Panelleri güvenle başlangıç konumuna getiren fonksiyon
     public void ResetUIToMainMenu()
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
@@ -133,6 +135,7 @@ public class RelayManager : MonoBehaviour
         if (startGameButton != null) startGameButton.gameObject.SetActive(false); 
         if (errorText != null) errorText.gameObject.SetActive(false);
     }
+
     private void ShowLobbyAfterReturn()
     {
         if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
@@ -147,7 +150,6 @@ public class RelayManager : MonoBehaviour
             startGameButton.interactable = false;
         }
 
-        // Playlist sıfırla ama bağlantıyı koru
         currentMapIndex = 0;
         showingScoreboard = false;
         isGameInProgress = false;
@@ -156,8 +158,7 @@ public class RelayManager : MonoBehaviour
         UpdatePlaylistUI();
         UpdatePlayerListUI();
 
-        if (lobbyCodeText != null)
-            lobbyCodeText.text = "Yeni oyun için harita seçin";
+        if (lobbyCodeText != null) lobbyCodeText.text = "Yeni oyun için harita seçin";
     }
 
     private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
@@ -177,6 +178,9 @@ public class RelayManager : MonoBehaviour
         }
 
         response.Approved = true;
+        
+        // 🚀 BÜYÜK DÜZELTME 2: Çifte Doğurma Çöküşünü Engelle!
+        // Karakteri manuel (OnSceneLoadCompleted içinde) doğurduğumuz için Netcode'un otomatik doğurmasını KAPATIYORUZ.
         response.CreatePlayerObject = true;
     }
 
@@ -224,14 +228,10 @@ public class RelayManager : MonoBehaviour
 
         if (NetworkManager.Singleton != null && clientId == NetworkManager.Singleton.LocalClientId)
         {
-            // DÜZELTME: Eğer bilerek çıkıyorsak (oyun bittiyse vs.) boşuna hata mesajı döngüsüne girme!
             if (!isIntentionallyLeaving)
             {
                 string reason = NetworkManager.Singleton.DisconnectReason;
-                if (string.IsNullOrEmpty(reason))
-                {
-                    reason = "Odaya bağlanılamadı. Oda kapanmış veya kod geçersiz.";
-                }
+                if (string.IsNullOrEmpty(reason)) reason = "Odaya bağlanılamadı. Oda kapanmış veya kod geçersiz.";
                 ShowError(reason);
                 LeaveLobby();
             }
@@ -270,7 +270,7 @@ public class RelayManager : MonoBehaviour
     {
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
         {
-            isIntentionallyLeaving = true; // Kapatırken kaza yaşanmasını engeller
+            isIntentionallyLeaving = true; 
             NetworkManager.Singleton.Shutdown();
             while (NetworkManager.Singleton.IsListening)
             {
@@ -292,16 +292,13 @@ public class RelayManager : MonoBehaviour
             string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
             UnityTransport transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
             
-            
             if (transport != null)
             {
-                // DÜZELTME: Hangi platformdaysak ona uygun bağlantı tipini seçiyoruz
                 string connectionType = "dtls";
 #if UNITY_WEBGL
                 transport.UseWebSockets = true;
                 connectionType = "wss";
 #endif
-                // Yeni nesil Relay tanımlaması (Doğru portları otomatik ayarlar)
                 RelayServerData relayServerData = new RelayServerData(allocation, connectionType);
                 transport.SetRelayServerData(relayServerData);
                 
@@ -309,6 +306,9 @@ public class RelayManager : MonoBehaviour
                 clientSlots.Clear(); 
                 
                 NetworkManager.Singleton.StartHost();
+                
+                // 🚀 BÜYÜK DÜZELTME 3: Sızıntı engelleme
+                NetworkManager.Singleton.SceneManager.OnLoadEventCompleted -= OnSceneLoadCompleted;
                 NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadCompleted;
 
                 if (lobbyCodeText != null) lobbyCodeText.text = "ODA KODU: " + joinCode;
@@ -348,7 +348,6 @@ public class RelayManager : MonoBehaviour
             
             if (transport != null)
             {
-                // DÜZELTME: Katılan kişi için de doğru bağlantı tipini ayarlıyoruz
                 string connectionType = "dtls";
 #if UNITY_WEBGL
                 transport.UseWebSockets = true;
@@ -456,9 +455,16 @@ public class RelayManager : MonoBehaviour
     {
         if (NetworkManager.Singleton.IsHost && gamePlaylist.Count > 0)
         {
+            // Çift tıklanıp iki kez sahne yüklenmesini engeller
+            if (isGameInProgress) return; 
+
             isGameInProgress = true; 
             showingScoreboard = false; 
             currentMapIndex = 0;
+
+            // 🚀 BÜYÜK DÜZELTME 4: Lobi UI Gizlemesi! (Yazıların üst üste binmesini çözer)
+            if (lobbyPanel != null) lobbyPanel.SetActive(false);
+            if (hostMapSelectionPanel != null) hostMapSelectionPanel.SetActive(false);
 
             NetworkManager.Singleton.SceneManager.LoadScene(gamePlaylist[currentMapIndex], UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
@@ -504,24 +510,41 @@ public class RelayManager : MonoBehaviour
 
     private void OnSceneLoadCompleted(string sceneName, UnityEngine.SceneManagement.LoadSceneMode loadMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
     {
-        if (sceneName.StartsWith("MiniGame_") || sceneName == "GameScene")
+        // 🚀 DÜZELTME: Artık sahne isimlerine takılmıyoruz. 
+        // Eğer sahne "MainMenu" veya "ScoreboardScene" DEĞİLSE, kesin oyun haritasındayızdır, karakteri doğur!
+        if (sceneName != "MainMenu" && sceneName != "ScoreboardScene")
         {
+            // Güvenlik Duvarı: Prefab yoksa çökmesin
+            if (gamePlayerPrefab == null) 
+            { 
+                Debug.LogError("[RelayManager] HATA: gamePlayerPrefab atanmamış! Karakterler doğamaz."); 
+                return; 
+            }
+
             foreach (ulong clientId in clientsCompleted)
             {
                 int slot = GetPlayerSlot(clientId);
 
+                // 🎯 SPAWN POINT MANAGER DEVREDE:
+                // Sahnede SpawnPointManager varsa oradaki noktaları alır, yoksa varsayılan yan yana dizer.
                 Vector3 spawnPosition = SpawnPointManager.Instance != null
                 ? SpawnPointManager.Instance.GetSpawnPosition(slot) 
                 : new Vector3(slot * 2.5f, 1f, 0f); 
 
                 GameObject newPlayer = Instantiate(gamePlayerPrefab, spawnPosition, Quaternion.identity);
+                
+                // Karakteri ağda fiziksel "PlayerObject" olarak yetkilendiriyoruz
                 newPlayer.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId, true);
 
+                // Lobi oyuncusundaki renk ve isimleri asıl fiziksel karaktere kopyalıyoruz
                 if (savedPlayerData.TryGetValue(clientId, out var data))
                 {
                     PlayerController controller = newPlayer.GetComponent<PlayerController>();
-                    controller.networkPlayerName.Value = data.name;
-                    controller.networkPlayerColor.Value = data.color; 
+                    if (controller != null)
+                    {
+                        controller.networkPlayerName.Value = data.name;
+                        controller.networkPlayerColor.Value = data.color; 
+                    }
                 }
             }
         }
@@ -529,7 +552,7 @@ public class RelayManager : MonoBehaviour
 
     public void LeaveLobby()
     {
-        isIntentionallyLeaving = true; // Mühürle: Ağ kapanırken gereksiz hatalar basmasın
+        isIntentionallyLeaving = true; 
 
         if (NetworkManager.Singleton != null) 
         {
@@ -544,7 +567,7 @@ public class RelayManager : MonoBehaviour
         if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "MainMenu")
         {
             ResetUIToMainMenu();
-            isIntentionallyLeaving = false; // Temizlik bitti mührü kaldır
+            isIntentionallyLeaving = false; 
         }
         else
         {

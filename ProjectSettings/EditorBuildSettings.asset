@@ -12,31 +12,31 @@ EditorBuildSettings:
     path: Assets/Scenes/ScoreboardScene.unity
     guid: 8c00825690fb74642a7e8c08139de31e
   - enabled: 1
-    path: Assets/Scenes/MiniGame_1.unity
+    path: Assets/Scenes/BlueParkour.unity
     guid: 2a989c1a1e0d6bb409462a33f010fdd7
   - enabled: 1
-    path: Assets/Scenes/MiniGame_2.unity
+    path: Assets/Scenes/RisingLava.unity
     guid: 1cbc28c4b2d480a418153b77c8798d12
   - enabled: 1
-    path: Assets/Scenes/MiniGame_3.unity
+    path: Assets/Scenes/MovingParkour.unity
     guid: 844a7bacc9ed4354286e46293a082e46
   - enabled: 1
-    path: Assets/Scenes/MiniGame_4.unity
+    path: Assets/Scenes/RoadOnLava.unity
     guid: ad8c81451b6647a449d1e7555c2ddb25
   - enabled: 1
-    path: Assets/Scenes/MiniGame_5.unity
+    path: Assets/Scenes/GrabCrown.unity
     guid: 5ab834faa3d4b8f42ace4f9847ac42f5
   - enabled: 1
-    path: Assets/Scenes/MiniGame_6.unity
+    path: Assets/Scenes/Colors.unity
     guid: b7226df301b2d0d4a84d82cf0209780c
   - enabled: 1
-    path: Assets/Scenes/MiniGame_7.unity
+    path: Assets/Scenes/PaintFloor.unity
     guid: dbe5f706f6340954ebdf9da559848194
   - enabled: 1
-    path: Assets/Scenes/MiniGame_8.unity
+    path: Assets/Scenes/FallingGround.unity
     guid: 9dfae3f514050054e87ea9a3c36dc148
   - enabled: 1
-    path: Assets/Scenes/MiniGame_9.unity
+    path: Assets/Scenes/Ice.unity
     guid: e755264779d647c47b64c851ed655c38
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}

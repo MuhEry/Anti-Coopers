@@ -596,6 +596,7 @@ MonoBehaviour:
   moveSpeed: 4
   jumpForce: 4.5
   animator: {fileID: 1909078878207846055}
+  myLocalCamera: {fileID: 336245348593656219}
   punchPoint: {fileID: 4280125473408626209}
   punchRadius: 1.3
   playerLayer:

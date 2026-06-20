@@ -129,7 +129,6 @@ public class MinigameCrownManager : BaseMinigameManager
     [ClientRpc]
     private void NotifyNewKingClientRpc(ulong kingId)
     {
-        string kingName = "Biri"; 
         // İsmi RelayManager'dan çekebiliriz
         statusText.gameObject.SetActive(true);
         statusText.text = $"<color=yellow>YENİ KRAL BELİRLENDİ!</color>";
