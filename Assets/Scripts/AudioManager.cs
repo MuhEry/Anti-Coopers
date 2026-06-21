@@ -12,6 +12,8 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioSource musicSource; 
     [SerializeField] private AudioSource sfxSource;   
 
+    [Header("Patlama Sesleri")]
+    public AudioClip explosionSound;
     [Header("Arka Plan Müzikleri")]
     public AudioClip menuMusic;
     [Tooltip("Oyun içinde çalacak alternatif müzikleri buraya ekleyin")]

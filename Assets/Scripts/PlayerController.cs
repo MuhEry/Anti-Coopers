@@ -76,17 +76,21 @@ public class PlayerController : NetworkBehaviour
         
         UpdatePlayerVisuals();
 
-        // 🚀 KESİN ÇÖZÜM: Kamera Yönetimi
-        // Eğer karakter bu ekranın sahibine (IsOwner) aitse kamerasını açıyoruz, başkasınaysa kapatıyoruz.
         if (myLocalCamera != null)
         {
-            myLocalCamera.SetActive(IsOwner);
-            
-            // Hareket yönünün kameraya göre hesaplanabilmesi için kameranın transform referansını alıyoruz
-            if (IsOwner)
+            // Eğer aktif mini oyun varsa ve bu oyun tepe kamerası istiyorsa, yerel kamerayı kapalı tut!
+            bool useTopDown = BaseMinigameManager.ActiveMinigame != null && BaseMinigameManager.ActiveMinigame.useTopDownCamera;
+
+            if (useTopDown)
             {
-                cameraTransform = myLocalCamera.transform;
+                myLocalCamera.SetActive(false);
             }
+            else
+            {
+                myLocalCamera.SetActive(IsOwner);
+            }
+            
+            if (IsOwner) cameraTransform = myLocalCamera.transform;
         }
     }
 

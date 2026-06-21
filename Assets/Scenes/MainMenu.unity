@@ -7976,6 +7976,7 @@ MonoBehaviour:
   audioMixer: {fileID: 24100000, guid: c57b878d47fc6e34485b15db82444a6d, type: 2}
   musicSource: {fileID: 1845008067}
   sfxSource: {fileID: 1845008066}
+  explosionSound: {fileID: 8300000, guid: d650b9e8b35920c4d8e4978c14e143b9, type: 3}
   menuMusic: {fileID: 8300000, guid: d7e0c017d5badde43a1531a50b724a10, type: 3}
   gameMusics:
   - {fileID: 8300000, guid: 234ba8f1f41470b488d7a731341ac594, type: 3}
