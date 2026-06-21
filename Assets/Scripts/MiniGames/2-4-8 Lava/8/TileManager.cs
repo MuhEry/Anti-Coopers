@@ -2,6 +2,7 @@
 using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
+using System.Linq;
 
 public class TileManager : NetworkBehaviour
 {
@@ -13,12 +14,23 @@ public class TileManager : NetworkBehaviour
     {
         if (Instance == null) Instance = this;
 
-        // Inspector'da doldurulmadıysa otomatik bul
         if (tiles == null || tiles.Length == 0)
-            tiles = FindObjectsByType<CrumblingTile>(FindObjectsSortMode.None);
+        {
+            tiles = FindObjectsByType<CrumblingTile>(FindObjectsSortMode.None)
+                    // 🚀 1. KURAL: Önce karoları Yüksekliğine (Y ekseni) göre yukarıdan aşağıya (Descending) diz.
+                    // (Mathf.Round, cihazlar arası küsurat sapmalarını engeller)
+                    .OrderByDescending(t => Mathf.Round(t.transform.position.y * 10f))
+                    
+                    // 🚀 2. KURAL: Aynı yükseklikte olanları (Aynı kattakileri) kendi içinde ismine göre diz.
+                    .ThenBy(t => t.gameObject.name)
+                    
+                    .ToArray();
+        }
 
         for (int i = 0; i < tiles.Length; i++)
+        {
             tiles[i].Init(i, this);
+        }
     }
 
     public void RequestCrumble(int tileIndex)

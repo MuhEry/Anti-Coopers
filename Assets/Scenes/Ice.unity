@@ -298,6 +298,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 0, y: 0, z: 85}
   speed: 0.08
+  initialDelay: 5
   useSmoothMovement: 0
 --- !u!114 &109311524
 MonoBehaviour:
@@ -510,7 +511,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 90, y: 0, z: 90}
-  speed: 0.05
+  speed: 0.055
+  initialDelay: 5
   useSmoothMovement: 0
 --- !u!114 &297511335
 MonoBehaviour:
@@ -670,7 +672,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: -90, y: 0, z: 90}
-  speed: 0.04
+  speed: 0.05
+  initialDelay: 5
   useSmoothMovement: 0
 --- !u!114 &325573986
 MonoBehaviour:
@@ -1082,6 +1085,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 0, y: 0, z: 90}
   speed: 0.08
+  initialDelay: 5
   useSmoothMovement: 0
 --- !u!114 &524101983
 MonoBehaviour:
@@ -2955,6 +2959,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 85, y: 0, z: 0}
   speed: 0.08
+  initialDelay: 5
   useSmoothMovement: 0
 --- !u!54 &1563101852
 Rigidbody:
@@ -3244,7 +3249,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 0, y: 0, z: 140}
-  speed: 0.035
+  speed: 0.045
+  initialDelay: 5
   useSmoothMovement: 0
 --- !u!114 &1640129224
 MonoBehaviour:
@@ -3404,7 +3410,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NetworkMovingObstacle
   ShowTopMostFoldoutHeaderGroup: 1
   movementOffset: {x: 100, y: 0, z: 0}
-  speed: 0.08
+  speed: 0.09
+  initialDelay: 5
   useSmoothMovement: 0
 --- !u!114 &1765182106
 MonoBehaviour:
@@ -3781,8 +3788,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 10, y: 2, z: 10}
-  m_Center: {x: 0, y: -3, z: 0}
+  m_Size: {x: 10, y: 3, z: 10}
+  m_Center: {x: 0, y: -2, z: 0}
 --- !u!1 &2041750106
 GameObject:
   m_ObjectHideFlags: 0

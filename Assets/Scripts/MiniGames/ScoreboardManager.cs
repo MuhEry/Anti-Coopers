@@ -64,14 +64,23 @@ public class ScoreboardManager : NetworkBehaviour
             else
             {
                 int remainingGames = totalMatches - currentMatch;
-                matchInfoText.text = $"Current Match: {currentMatch} / {totalMatches}  |  <color=green>Remaining Matches: {remainingGames}</color>";
-            }
+                matchInfoText.text = $"Current Match: {currentMatch} / {totalMatches}\n<color=green>Remaining Matches: {remainingGames}</color>";            }
         }
 
         // B. Skor Tablosunu Oluşturma (Gelen verileri büyükten küçüğe sırala)
         if (scoreboardText == null || RelayManager.Instance == null) return;
 
-        scoreboardText.text = "<color=yellow>CURRENT SCORE STATUS</color>\n\n";
+        bool isFinalScoreboard = currentMatch >= totalMatches;
+
+        // Başlık Yazısı: Finalse Şampiyon, değilse Normal Durum
+        if (isFinalScoreboard)
+        {
+            scoreboardText.text = "<size=130%><color=yellow>THE CHAMPION</color>\n\n";
+        }
+        else
+        {
+            scoreboardText.text = "<color=yellow>CURRENT SCORE STATUS</color>\n\n";
+        }
 
         List<(ulong id, int score)> playerDataList = new List<(ulong, int)>();
         for (int i = 0; i < playerIds.Length; i++)
@@ -93,7 +102,16 @@ public class ScoreboardManager : NetworkBehaviour
                 colorHex = ColorUtility.ToHtmlStringRGB(color);
             }
 
-            scoreboardText.text += $"{rank}. <color=#{colorHex}>{pName}</color>  {player.score} Points\n";
+            // 🚀 ŞAMPİYON VURGUSU
+            if (rank == 1 && isFinalScoreboard)
+            {
+                // <size=x%> etiketi sadece bu satırın fontunu diğerlerine göre devasa yapar
+                scoreboardText.text += $"<size=150%><color=#{colorHex}>{pName}</color>  {player.score} Pts</size>\n\n";
+            }
+            else
+            {
+                scoreboardText.text += $"{rank}. <color=#{colorHex}>{pName}</color>  {player.score} Points\n";
+            }
             rank++;
         }
     }

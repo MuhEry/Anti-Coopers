@@ -76,6 +76,7 @@ public class ThirdPersonCamera : NetworkBehaviour
 
     private void HandleMouseInput()
     {
+        if (PauseMenuManager.IsPaused) return;
         if (Mouse.current == null) return;
         Vector2 delta = Mouse.current.delta.ReadValue();
         yaw   += delta.x * mouseSensitivityX;

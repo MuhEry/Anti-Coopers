@@ -1,7 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody))] // Bu script eklendiğinde otomatik olarak Rigidbody de eklenir
+[RequireComponent(typeof(Rigidbody))]
 public class NetworkMovingObstacle : NetworkBehaviour
 {
     [Header("Rota Ayarları")]
@@ -15,45 +15,65 @@ public class NetworkMovingObstacle : NetworkBehaviour
     [Tooltip("İşaretliyse nesne yumuşak (yavaşlayarak) döner. İşaretli değilse robotik (sabit hızla) çarparak döner.")]
     [SerializeField] private bool useSmoothMovement = true;
 
+    [Header("Başlangıç Gecikmesi")]
+    [Tooltip("Oyun başladıktan kaç saniye sonra hareket etmeye başlasın? (Geri sayım zaten bekletiyorsa 0 bırakabilirsin)")]
+    [SerializeField] private float startDelay = 0f;
+
     private Vector3 startPosition;
     private Rigidbody rb;
+    private double movementStartTime = -1; // Henüz başlamadı sinyali
 
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
-        // Nesnenin yerçekimiyle düşmemesi ve fizik motoruyla değil bizim kodumuzla hareket etmesi için
         rb.isKinematic = true; 
-        rb.interpolation = RigidbodyInterpolation.Interpolate; // Ekran titremesini önler
-
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
         startPosition = transform.position;
     }
 
     private void FixedUpdate()
     {
-        // 1. Ağın ortak saatini alıyoruz (Eğer ağa bağlı değilsek test için normal saati al)
         double currentTime = NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening 
             ? NetworkManager.Singleton.ServerTime.Time 
             : Time.time;
 
+        // 1. Oyun henüz başlamadıysa (geri sayım sürüyorsa) tamamen sabit dur
+        if (BaseMinigameManager.ActiveMinigame != null && !BaseMinigameManager.ActiveMinigame.IsGameStarted)
+        {
+            movementStartTime = -1; // Sıfırla, oyun başlayınca tekrar zamanlasın
+            rb.MovePosition(startPosition); // 🚀 GÜVENLİK: Geri sayım bitene kadar buraya çivile!
+            return; // startPosition'da sabit kalır, hiçbir hesap yapılmaz
+        }
+
+        // 2. Oyun başladı ama bizim ekstra gecikmemiz varsa, başlangıç zamanını mühürle
+        if (movementStartTime < 0)
+        {
+            movementStartTime = currentTime;
+        }
+
+        double elapsed = currentTime - movementStartTime;
+
+        // 3. Gecikme süresi dolmadıysa hâlâ sabit dur
+        if (elapsed < startDelay)
+        {
+            rb.MovePosition(startPosition);
+            return;
+        }
+
+        // 4. Gecikme bittiyse normal hareket matematiğine geç (zamanı gecikmeden başlatarak)
+        float effectiveTime = (float)(elapsed - startDelay);
         float movementPercent;
 
-        // 2. Zamanı 0 ile 1 arasında gidip gelen bir değere dönüştürüyoruz
         if (useSmoothMovement)
         {
-            // Sinüs dalgası (0 ile 1 arası): Uç noktalara gelince yavaşlar, ortaya gelince hızlanır
-            movementPercent = (Mathf.Sin((float)currentTime * speed) + 1f) / 2f; 
+            movementPercent = (Mathf.Sin(effectiveTime * speed) + 1f) / 2f; 
         }
         else
         {
-            // PingPong dalgası: Dümdüz gider, duvara çarpmış gibi aynı hızla geri döner
-            movementPercent = Mathf.PingPong((float)currentTime * speed, 1f);
+            movementPercent = Mathf.PingPong(effectiveTime * speed, 1f);
         }
 
-        // 3. Hedef pozisyonu hesapla (Başlangıç noktası ile gidilecek maksimum nokta arası)
         Vector3 targetPosition = Vector3.Lerp(startPosition, startPosition + movementOffset, movementPercent);
-
-        // 4. Fizik motorunu kullanarak nesneyi taşı
-        // MovePosition kullanıyoruz ki eğer bir oyuncu üstüne çıkarsa onun altından kayıp gitmesin, oyuncuyu da taşısın!
         rb.MovePosition(targetPosition);
     }
 }

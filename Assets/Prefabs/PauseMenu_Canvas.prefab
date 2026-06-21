@@ -631,7 +631,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Leave Game
+  m_text: Leave Room
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 925d3467b7f450047b1c8c66517286c1, type: 2}
   m_sharedMaterial: {fileID: 2370374097970800273, guid: 925d3467b7f450047b1c8c66517286c1, type: 2}
