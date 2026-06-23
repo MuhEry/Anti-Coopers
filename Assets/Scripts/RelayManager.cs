@@ -516,6 +516,21 @@ public class RelayManager : MonoBehaviour
                 return; 
             }
 
+            // 🚀 SUNUCU TEMİZLİĞİ: Eski lobi karakterlerini dünya boşluğuna düşmeden önce tamamen imha et
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+            {
+                LobbyPlayer[] oldLobbyPlayers = FindObjectsByType<LobbyPlayer>(FindObjectsSortMode.None);
+                foreach (var lobbyPlayer in oldLobbyPlayers)
+                {
+                    var netObj = lobbyPlayer.GetComponent<NetworkObject>();
+                    if (netObj != null && netObj.IsSpawned)
+                    {
+                        netObj.Despawn(true); // Hem sunucudan hem de tüm istemcilerden siler
+                    }
+                }
+            }
+
+            // --- YENİ OYUNCULARI DOĞURMA AŞAMASI ---
             foreach (ulong clientId in clientsCompleted)
             {
                 int slot = GetPlayerSlot(clientId);
@@ -525,6 +540,8 @@ public class RelayManager : MonoBehaviour
                 : new Vector3(slot * 2.5f, 1f, 0f); 
 
                 GameObject newPlayer = Instantiate(gamePlayerPrefab, spawnPosition, Quaternion.identity);
+                
+                // Claude'un haklı olduğu ve referansı güncelleyen o meşhur satır:
                 newPlayer.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId, true);
 
                 if (savedPlayerData.TryGetValue(clientId, out var data))
