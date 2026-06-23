@@ -34,17 +34,19 @@ public class MobileInputManager : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // Eğer Ana Menü sahnesindeysek mobil butonları gizle
-        if (scene.name == "MainMenu")
+        if (controlsPanel == null) return;
+
+        // 🚀 ESNEK ÇÖZÜM: Sahne adlarını tek tek kontrol etmek yerine, 
+        // butonların KESİNLİKLE OLMAMASI gereken sahneleri (Menü ve Skor Tablosu) hariç tutuyoruz.
+        if (scene.name == "MainMenu" || scene.name == "ScoreboardScene")
         {
-            if (controlsPanel != null) controlsPanel.SetActive(false);
+            controlsPanel.SetActive(false);
         }
-        // Eğer bir mini oyun haritasındaysak butonları göster
-        else if (scene.name.StartsWith("MiniGame_") || scene.name == "GameScene")
+        else
         {
-            // Editörde veya Mobil cihazlarda görünmesini tetikle
+            // Menü ve Skor Tablosu dışındaki tüm oyun sahnelerinde (Bomba, Lav, Taç vb.) paneli aç
             #if UNITY_ANDROID || UNITY_IOS || UNITY_EDITOR
-            if (controlsPanel != null) controlsPanel.SetActive(true);
+                controlsPanel.SetActive(true);
             #endif
         }
     }

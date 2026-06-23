@@ -42,7 +42,7 @@ public class RelayManager : MonoBehaviour
     private Dictionary<ulong, int> clientSlots = new Dictionary<ulong, int>();
     private bool isGameInProgress = false; 
     private bool isIntentionallyLeaving = false; 
-
+    private string currentJoinCode = "";
     private List<string> gamePlaylist = new List<string>();
     private bool showingScoreboard = false;
     private int currentMapIndex = 0;
@@ -153,11 +153,13 @@ public class RelayManager : MonoBehaviour
         showingScoreboard = false;
         isGameInProgress = false;
         gamePlaylist.Clear();
-
+        playerScores.Clear();
         UpdatePlaylistUI();
         UpdatePlayerListUI();
-
-        if (lobbyCodeText != null) lobbyCodeText.text = "Yeni oyun için harita seçin";
+        if (lobbyCodeText != null) 
+        {
+            lobbyCodeText.text = "ROOM CODE: " + currentJoinCode;
+        }
     }
 
     private void ApprovalCheck(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
@@ -165,14 +167,14 @@ public class RelayManager : MonoBehaviour
         if (isGameInProgress)
         {
             response.Approved = false;
-            response.Reason = "Oyun çoktan başladı!";
+            response.Reason = "Game in progress!";
             return;
         }
 
         if (clientSlots.Count >= 8)
         {
             response.Approved = false;
-            response.Reason = "Oda kapasitesi (8/8) dolu!";
+            response.Reason = "Room is full!";
             return;
         }
 
@@ -227,7 +229,7 @@ public class RelayManager : MonoBehaviour
             if (!isIntentionallyLeaving)
             {
                 string reason = NetworkManager.Singleton.DisconnectReason;
-                if (string.IsNullOrEmpty(reason)) reason = "Odaya bağlanılamadı. Kod geçersiz olabilir.";
+                if (string.IsNullOrEmpty(reason)) reason = "Could not connect to room. Invalid code.";
                 ShowError(reason);
                 LeaveLobby();
             }
@@ -243,7 +245,7 @@ public class RelayManager : MonoBehaviour
         if (errorText != null)
         {
             errorText.gameObject.SetActive(true);
-            errorText.text = $"<color=red>BİLGİ:</color> {message}";
+            errorText.text = $"<color=red>INFO:</color> {message}";
             CancelInvoke(nameof(HideError));
             Invoke(nameof(HideError), 4f); 
         }
@@ -296,23 +298,26 @@ public class RelayManager : MonoBehaviour
                 
                 isGameInProgress = false; 
                 clientSlots.Clear(); 
-                
-                NetworkManager.Singleton.StartHost();
-                
-                NetworkManager.Singleton.SceneManager.OnLoadEventCompleted -= OnSceneLoadCompleted;
-                NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadCompleted;
+                currentJoinCode = joinCode;
 
-                if (lobbyCodeText != null) lobbyCodeText.text = "ODA KODU: " + joinCode;
+                if (lobbyCodeText != null) lobbyCodeText.text = "ROOM CODE: " + joinCode;
                 if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
                 if (lobbyPanel != null) lobbyPanel.SetActive(true);
                 if (hostMapSelectionPanel != null) hostMapSelectionPanel.SetActive(true);
-                
+
                 if (startGameButton != null)
                 {
                     startGameButton.gameObject.SetActive(true);
                     startGameButton.interactable = false;
                 }
                 UpdatePlaylistUI();
+
+                NetworkManager.Singleton.StartHost();
+                // Ekstra güvenlik: Spawn senkron olmasa bile listeyi tazele
+                UpdatePlayerListUI();
+                
+                NetworkManager.Singleton.SceneManager.OnLoadEventCompleted -= OnSceneLoadCompleted;
+                NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadCompleted;
             }
         }
         catch (RelayServiceException e) { Debug.LogError("Relay hatası: " + e.Message); }
@@ -330,7 +335,7 @@ public class RelayManager : MonoBehaviour
             
             if (string.IsNullOrWhiteSpace(joinCode))
             {
-                ShowError("Geçersiz kod!");
+                ShowError("Invalid code!");
                 return;
             }
 
@@ -342,15 +347,15 @@ public class RelayManager : MonoBehaviour
                 string connectionType = transport.UseWebSockets ? "wss" : "dtls";
                 RelayServerData relayServerData = new RelayServerData(joinAllocation, connectionType);
                 transport.SetRelayServerData(relayServerData);
-                
-                ShowError("Odaya bağlanılıyor, lütfen bekleyin...");
+                currentJoinCode = joinCode;
+                ShowError("Connecting to room...");
                 NetworkManager.Singleton.StartClient();
-                if (lobbyCodeText != null) lobbyCodeText.text = "ODA KODU: " + joinCode;
+                if (lobbyCodeText != null) lobbyCodeText.text = "ROOM CODE: " + joinCode;
             }
         }
         catch (System.Exception) 
         { 
-            ShowError("Geçersiz kod! Oda bulunamadı veya bağlantı koptu."); 
+            ShowError("Invalid code! Room not found or connection failed."); 
         }
     }
 
@@ -360,12 +365,12 @@ public class RelayManager : MonoBehaviour
 
         LobbyPlayer[] players = FindObjectsByType<LobbyPlayer>(FindObjectsSortMode.None);
         bool allReady = true;
-        playerListText.text = "ODADAKİ OYUNCULAR:\n";
+        playerListText.text = "ROOM PLAYERS:\n";
         savedPlayerData.Clear();
 
         foreach (LobbyPlayer player in players)
         {
-            string readyStatus = player.isReady.Value ? "<color=green>[HAZIR]</color>" : "<color=red>[BEKLİYOR]</color>";
+            string readyStatus = player.isReady.Value ? "<color=green>[READY]</color>" : "<color=red>[WAITING]</color>";
             playerListText.text += $"- {player.playerName.Value} {readyStatus}\n";
             if (!player.isReady.Value) allReady = false;
 
@@ -425,7 +430,7 @@ public class RelayManager : MonoBehaviour
     private void UpdatePlaylistUI()
     {
         if (playlistText == null) return;
-        playlistText.text = "OYNATMA LİSTESİ:\n";
+        playlistText.text = "PLAYLIST:\n";
         for (int i = 0; i < gamePlaylist.Count; i++)
         {
             playlistText.text += $"{i + 1}. {gamePlaylist[i]}\n";
@@ -520,7 +525,7 @@ public class RelayManager : MonoBehaviour
                 : new Vector3(slot * 2.5f, 1f, 0f); 
 
                 GameObject newPlayer = Instantiate(gamePlayerPrefab, spawnPosition, Quaternion.identity);
-                newPlayer.GetComponent<NetworkObject>().SpawnWithOwnership(clientId, true);
+                newPlayer.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId, true);
 
                 if (savedPlayerData.TryGetValue(clientId, out var data))
                 {

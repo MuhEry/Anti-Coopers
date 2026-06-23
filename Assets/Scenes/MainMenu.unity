@@ -4845,19 +4845,22 @@ MonoBehaviour:
   m_MultiSelect: 0
   m_Options:
     m_Options:
-    - m_Text: GrabCrown
+    - m_Text: Bomb
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
     - m_Text: Colors
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
+    - m_Text: GrabCrown
+      m_Image: {fileID: 0}
+      m_Color: {r: 1, g: 1, b: 1, a: 1}
     - m_Text: PaintFloor
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
-    - m_Text: Ice
+    - m_Text: FallingGround
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
-    - m_Text: FallingGround
+    - m_Text: Ice
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
     - m_Text: RisingLava
@@ -7976,6 +7979,7 @@ MonoBehaviour:
   audioMixer: {fileID: 24100000, guid: c57b878d47fc6e34485b15db82444a6d, type: 2}
   musicSource: {fileID: 1845008067}
   sfxSource: {fileID: 1845008066}
+  tickSound: {fileID: 8300000, guid: b0630b50861d6cf4591a14414f22ea52, type: 3}
   explosionSound: {fileID: 8300000, guid: d650b9e8b35920c4d8e4978c14e143b9, type: 3}
   menuMusic: {fileID: 8300000, guid: d7e0c017d5badde43a1531a50b724a10, type: 3}
   gameMusics:

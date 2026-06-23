@@ -19,7 +19,8 @@ public class MobileButtonRelay : MonoBehaviour
             var playerObj = NetworkManager.Singleton.LocalClient.PlayerObject;
             if (playerObj != null)
             {
-                playerObj.GetComponent<PlayerController>().OnMobileJumpHeld();
+                PlayerController pc = playerObj.GetComponent<PlayerController>();
+                pc.OnMobileJumpHeld();
             }
         }
     }
@@ -31,7 +32,8 @@ public class MobileButtonRelay : MonoBehaviour
             var playerObj = NetworkManager.Singleton.LocalClient.PlayerObject;
             if (playerObj != null)
             {
-                playerObj.GetComponent<PlayerController>().OnMobilePunchPressed();
+                PlayerController pc = playerObj.GetComponent<PlayerController>();
+                pc.OnMobilePunchPressed();
             }
         }
     }

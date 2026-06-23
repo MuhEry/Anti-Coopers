@@ -43,7 +43,7 @@ public class MobileControlSpawner : MonoBehaviour
             GameObject spawnedUI = Instantiate(mobileControlsPrefab);
             DontDestroyOnLoad(spawnedUI);
 
-            hasSpawned = true; // Mühürle — bir daha asla spawn olmasın
+            hasSpawned = true; 
 
             Debug.Log("<color=cyan>[MobileSpawner]:</color> Mobil kontroller başarıyla sahneye yüklendi.");
         }

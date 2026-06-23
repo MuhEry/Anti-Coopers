@@ -78,19 +78,13 @@ public class PlayerController : NetworkBehaviour
 
         if (myLocalCamera != null)
         {
-            // Eğer aktif mini oyun varsa ve bu oyun tepe kamerası istiyorsa, yerel kamerayı kapalı tut!
-            bool useTopDown = BaseMinigameManager.ActiveMinigame != null && BaseMinigameManager.ActiveMinigame.useTopDownCamera;
-
-            if (useTopDown)
-            {
-                myLocalCamera.SetActive(false);
-            }
-            else
-            {
-                myLocalCamera.SetActive(IsOwner);
-            }
+            myLocalCamera.SetActive(IsOwner);
             
-            if (IsOwner) cameraTransform = myLocalCamera.transform;
+            // Hareket yönünün kameraya göre hesaplanabilmesi için kameranın transform referansını alıyoruz
+            if (IsOwner)
+            {
+                cameraTransform = myLocalCamera.transform;
+            }
         }
     }
 

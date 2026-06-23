@@ -88,25 +88,35 @@ public class PauseMenuManager : MonoBehaviour
         }
     }
 
-    // YENİ: Fare imlecini menü durumuna göre kilitleyen veya serbest bırakan metot
     private void UpdateCursorState()
-    {
-        // Mobilde imleç yönetimine gerek yok
-        if (Application.isMobilePlatform) return;
+{
+    if (Application.isMobilePlatform) return;
 
-        if (IsPaused)
+    if (IsPaused)
+    {
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+    else
+    {
+        // YENİ: Hangi sahnede olduğumuza göre karar veriyoruz
+        string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        bool isMenu = sceneName == "MainMenu" || sceneName == "ScoreboardScene";
+
+        if (isMenu)
         {
-            // Menü açıksa fareyi serbest bırak ve görünür yap (Butonlara tıklayabilmek için)
+            // MainMenu veya Scoreboard'dayız, mouse serbest kalsın
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
         else
         {
-            // Oyun devam ediyorsa fareyi ortaya kilitle ve gizle (Kamerayı çevirebilmek için)
+            // Oyun içindeyiz, kamera kontrolü için kilitle
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
     }
+}
 
     private void OnDestroy()
     {

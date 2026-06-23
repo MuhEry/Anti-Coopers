@@ -50,8 +50,8 @@ public class MinigameColorConquestManager : BaseMinigameManager
             UpdateCountdownClientRpc(i.ToString());
             yield return new WaitForSeconds(1f);
         }
-        UpdateCountdownClientRpc("BOYA!");
-        yield return new WaitForSeconds(0.8f);
+        UpdateCountdownClientRpc("paint the floor!");
+        yield return new WaitForSeconds(1f);
         UpdateCountdownClientRpc("");
 
         gameStarted.Value = true;

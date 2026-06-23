@@ -1,6 +1,8 @@
+using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
+using TMPro; // UI elemanları için gerekli
 
 public class BombMinigameManager : BaseMinigameManager 
 {
@@ -8,25 +10,34 @@ public class BombMinigameManager : BaseMinigameManager
     [SerializeField] private float minExplosionTime = 10f;
     [SerializeField] private float maxExplosionTime = 15f;
     [SerializeField] private GameObject bombVisualPrefab; 
-    [SerializeField] private GameObject explosionEffectPrefab; 
-    [SerializeField] private float startDelay = 3f; // Oyun başlamadan önceki geri sayım süresi
+    
+    [Header("Geri Sayım & UI")]
+    [SerializeField] private TMP_Text countdownText;
+    [SerializeField] private TMP_Text statusText;
+
+    [Header("Bomba Ses Ayarları")]
+    [Tooltip("En yavaş tık sesi aralığı (saniye)")]
+    [SerializeField] private float slowTickInterval = 1.0f;
+    [Tooltip("Patlamaya saniyeler kala tık sesi aralığı")]
+    [SerializeField] private float fastTickInterval = 0.2f;
+
+    [Header("İzleyici Ayarları")]
+    [SerializeField] private GameObject spectatorCamera;
 
     public NetworkVariable<ulong> currentBombHolderId = new NetworkVariable<ulong>(9999, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public NetworkVariable<float> bombTimer = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    // 🚀 DÜZELTME 1: Abstract IsGameStarted özelliğini implemente ediyoruz
     private NetworkVariable<bool> isGameStarted = new NetworkVariable<bool>(false);
     public override bool IsGameStarted => isGameStarted.Value;
 
     private GameObject activeBombVisual;
     private List<ulong> alivePlayers = new List<ulong>();
-    private float startTimer;
+    private bool isEnding = false;
+    private float nextTickTime;
 
     protected override void Awake()
     {
-        base.Awake(); // BaseMinigameManager'daki ActiveMinigame = this satırını çalıştırır
-        useTopDownCamera = true;
-        startTimer = startDelay;
+        base.Awake(); 
     }
 
     public override void OnNetworkSpawn()
@@ -39,41 +50,90 @@ public class BombMinigameManager : BaseMinigameManager
 
         if (IsServer)
         {
-            // Oyun başlarken odadaki herkesi "Hayatta" olarak listeye ekliyoruz
             foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
             {
                 alivePlayers.Add(clientId);
             }
+            // 🚀 OYUN BAŞLADIĞINDA GERİ SAYIMI BAŞLAT
+            StartCoroutine(StartCountdown());
         }
+
+        // Başlangıçta yazıları gizle
+        if (statusText != null) statusText.gameObject.SetActive(false);
+        if (countdownText != null) countdownText.gameObject.SetActive(false);
     }
 
-    // 🚀 DÜZELTME 2: 'override Update' yerine düz 'Update' kullanıyoruz
+    // 🚀 LAVA HARİTASINDAKİ GERİ SAYIM SİSTEMİ
+    private IEnumerator StartCountdown()
+    {
+        isGameStarted.Value = false;
+
+        for (int i = 3; i > 0; i--) // Bomba haritası için 3 saniye idealdir
+        {
+            ShowCountdownClientRpc(i.ToString(), false);
+            yield return new WaitForSeconds(1f);
+        }
+
+        ShowCountdownClientRpc("Give the bomb to your rivals!", true);
+        yield return new WaitForSeconds(1.5f);
+        HideCountdownClientRpc();
+        
+        isGameStarted.Value = true;
+        AssignBombToRandomPlayer(); // Geri sayım bittiğinde bombayı birine ver
+    }
+
     private void Update()
     {
         UpdateBombVisual();
 
-        if (!IsServer) return;
-
-        // --- GERİ SAYIM AŞAMASI ---
-        if (!isGameStarted.Value)
+        if (isGameStarted.Value && currentBombHolderId.Value != 9999 && !isEnding)
         {
-            startTimer -= Time.deltaTime;
-            if (startTimer <= 0f)
-            {
-                isGameStarted.Value = true;
-                AssignBombToRandomPlayer(); // Geri sayım bittiğinde bombayı birine ver
-            }
+            HandleTickingSound();
+        }
+
+        if (!IsServer || isEnding || !isGameStarted.Value) return;
+
+        if (alivePlayers.Count == 1)
+        {
+            isEnding = true;
+            ulong winnerId = alivePlayers[0];
+            
+            ShowWinnerUIClientRpc(winnerId);
+            StartCoroutine(EndGameRoutine(winnerId));
+            return;
+        }
+        
+        // Eğer bir hata sonucu odada kimse kalmadıysa oyunu güvenle kapat
+        if (alivePlayers.Count == 0)
+        {
+            isEnding = true;
+            StartCoroutine(EndGameRoutine(9999));
             return;
         }
 
-        // --- OYUN AŞAMASI ---
-        if (alivePlayers.Count <= 1) return; // 1 kişi kaldıysa oyun bitmiştir
-
-        bombTimer.Value -= Time.deltaTime;
+        // Ağ trafiğini rahatlatmak için süreyi normal şekilde düşürüp ağa veriyoruz
+        float previousTime = bombTimer.Value;
+        float newTime = previousTime - Time.deltaTime;
+        bombTimer.Value = newTime;
 
         if (bombTimer.Value <= 0f)
         {
             ExplodeBomb();
+        }
+    }
+
+    private void HandleTickingSound()
+    {
+        if (Time.time >= nextTickTime)
+        {
+            if (AudioManager.Instance != null && AudioManager.Instance.tickSound != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.tickSound);
+            }
+
+            float timeRatio = Mathf.Clamp01(bombTimer.Value / maxExplosionTime);
+            float currentInterval = Mathf.Lerp(fastTickInterval, slowTickInterval, timeRatio);
+            nextTickTime = Time.time + currentInterval;
         }
     }
 
@@ -89,9 +149,8 @@ public class BombMinigameManager : BaseMinigameManager
 
     public override void OnPlayerHit(ulong attackerId, ulong victimId)
     {
-        if (!IsServer || !IsGameStarted) return;
+        if (!IsServer || !IsGameStarted || isEnding) return;
 
-        // Vuran kişi bombaya sahipse ve vurulan kişi hâlâ hayattaysa bombayı devret
         if (currentBombHolderId.Value == attackerId && alivePlayers.Contains(victimId))
         {
             currentBombHolderId.Value = victimId;
@@ -104,64 +163,155 @@ public class BombMinigameManager : BaseMinigameManager
         
         TriggerExplosionEffectClientRpc(deadPlayerId);
 
-        // Oyuncuyu hayattakiler listesinden çıkar
         alivePlayers.Remove(deadPlayerId);
-        
-        // Base sınıftaki event'i çağır
         PlayerEliminated(deadPlayerId);
+
+        // Hayatta kalanlara puan ver
+        if (RelayManager.Instance != null)
+        {
+            foreach (ulong survivorId in alivePlayers)
+            {
+                RelayManager.Instance.AddScore(survivorId, 15);
+            }
+        }
 
         if (alivePlayers.Count > 1)
         {
-            AssignBombToRandomPlayer(); // Hâlâ oyuncu varsa yeni bomba ata
+            AssignBombToRandomPlayer(); 
         }
         else
         {
-            // Sadece 1 kişi kaldı! Şampiyonu belirle
-            ulong winnerId = alivePlayers[0];
-            if (RelayManager.Instance != null)
-            {
-                RelayManager.Instance.AddScore(winnerId, 10); // Kazanana 10 puan ekle
-                RelayManager.Instance.LoadNextMinigame(); // Skor tablosuna geç
-            }
+            isEnding = true; 
+            ulong winnerId = alivePlayers.Count > 0 ? alivePlayers[0] : 9999;
+            
+            // 🚀 LAVA SİSTEMİ: Kazanan varsa UI ekranını göster
+            if (winnerId != 9999) ShowWinnerUIClientRpc(winnerId);
+            
+            StartCoroutine(EndGameRoutine(winnerId)); 
+        }
+    }
+
+    private IEnumerator EndGameRoutine(ulong winnerId)
+    {
+        if (winnerId != 9999 && RelayManager.Instance != null)
+        {
+            RelayManager.Instance.AddScore(winnerId, 15);
+        }
+
+        if (activeBombVisual != null) activeBombVisual.SetActive(false);
+
+        yield return new WaitForSeconds(4f);
+
+        if (RelayManager.Instance != null)
+        {
+            RelayManager.Instance.LoadNextMinigame();
         }
     }
 
     [ClientRpc]
     private void TriggerExplosionEffectClientRpc(ulong playerId)
     {
-        // Ses efekti
         if (AudioManager.Instance != null && AudioManager.Instance.explosionSound != null) 
             AudioManager.Instance.PlaySFX(AudioManager.Instance.explosionSound);
 
-        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(playerId, out var client))
+        PlayerController[] allPlayers = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
+        PlayerController deadPlayer = null;
+
+        foreach (var player in allPlayers)
         {
-            // Patlama görselini oluştur
-            if (explosionEffectPrefab != null)
+            if (player.OwnerClientId == playerId)
             {
-                Instantiate(explosionEffectPrefab, client.PlayerObject.transform.position, Quaternion.identity);
+                deadPlayer = player;
+                break;
             }
-            
-            // Ölen oyuncunun karakterini görsel olarak gizle
-            if (client.PlayerObject != null)
+        }
+
+        if (deadPlayer != null)
+        {
+            if (NetworkManager.Singleton.LocalClientId == playerId)
             {
-                client.PlayerObject.gameObject.SetActive(false); 
+                deadPlayer.enabled = false; 
+
+                // 🚀 LAVA SİSTEMİ: Ölüm Bildirimi
+                if (statusText != null)
+                {
+                    statusText.gameObject.SetActive(true);
+                    statusText.text = $"<color=red>YOU EXPLODED!</color>";
+                }
+
+                var vCams = FindObjectsByType<Unity.Cinemachine.CinemachineCamera>(FindObjectsSortMode.None);
+                foreach (var vCam in vCams) vCam.gameObject.SetActive(false);
+
+                if (Camera.main != null) Camera.main.gameObject.SetActive(false);
+
+                if (spectatorCamera != null) 
+                {
+                    spectatorCamera.SetActive(true);
+                    
+                    var specCamComp = spectatorCamera.GetComponent<Camera>();
+                    if (specCamComp != null) specCamComp.enabled = true;
+                }
+            }
+            deadPlayer.gameObject.SetActive(false); 
+        }
+    }
+
+    // 🚀 YENİ UI FONKSİYONLARI 
+    [ClientRpc]
+    private void ShowWinnerUIClientRpc(ulong winnerId)
+    {
+        if (NetworkManager.Singleton.LocalClientId == winnerId)
+        {
+            if (statusText != null)
+            {
+                statusText.gameObject.SetActive(true);
+                statusText.text = $"<color=yellow>YOU SURVIVED!</color>\n<size=40>+15 BONUS POINTS</size>";
             }
         }
     }
 
+    [ClientRpc]
+    private void ShowCountdownClientRpc(string text, bool isGo)
+    {
+        if (countdownText == null) return;
+        countdownText.gameObject.SetActive(true);
+        countdownText.text = text;
+    }
+
+    [ClientRpc]
+    private void HideCountdownClientRpc()
+    {
+        if (countdownText != null) countdownText.gameObject.SetActive(false);
+    }
+
     private void UpdateBombVisual()
     {
-        if (activeBombVisual == null) return;
-
-        if (currentBombHolderId.Value != 9999 && NetworkManager.Singleton.ConnectedClients.TryGetValue(currentBombHolderId.Value, out var client))
+        if (activeBombVisual == null || isEnding) 
         {
-            // Oyuncu sahnede aktifse bombayı kafasına koy
-            if (client.PlayerObject != null && client.PlayerObject.gameObject.activeInHierarchy)
+            if (activeBombVisual != null) activeBombVisual.SetActive(false);
+            return;
+        }
+
+        if (currentBombHolderId.Value != 9999)
+        {
+            GameObject holderObj = null;
+
+            PlayerController[] allPlayers = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
+            foreach (var player in allPlayers)
+            {
+                if (player.OwnerClientId == currentBombHolderId.Value)
+                {
+                    holderObj = player.gameObject;
+                    break;
+                }
+            }
+
+            if (holderObj != null && holderObj.activeInHierarchy)
             {
                 activeBombVisual.SetActive(true);
-                Vector3 targetPos = client.PlayerObject.transform.position + Vector3.up * 2.5f;
+                Vector3 targetPos = holderObj.transform.position + Vector3.up * 2f;
                 activeBombVisual.transform.position = Vector3.Lerp(activeBombVisual.transform.position, targetPos, Time.deltaTime * 15f);
-                activeBombVisual.transform.Rotate(0, 180f * Time.deltaTime, 0); 
+                activeBombVisual.transform.Rotate(0, 70f * Time.deltaTime, 0); 
             }
             else
             {
