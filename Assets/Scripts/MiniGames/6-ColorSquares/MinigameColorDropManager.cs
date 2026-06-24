@@ -204,7 +204,12 @@ public class MinigameColorDropManager : BaseMinigameManager
             foreach (var vCam in vCams) vCam.gameObject.SetActive(false);
             if (Camera.main != null) Camera.main.gameObject.SetActive(false);
 
-            if (spectatorCamera != null) spectatorCamera.SetActive(true);
+            if (Instance.spectatorCamera != null)
+            {
+                Instance.spectatorCamera.SetActive(true);
+                var specCamComp = Instance.spectatorCamera.GetComponent<Camera>();
+                if (specCamComp != null) specCamComp.enabled = true;
+            }
 
             if (AudioManager.Instance != null) AudioManager.Instance.PlaySFX(AudioManager.Instance.deathSound);
         }
