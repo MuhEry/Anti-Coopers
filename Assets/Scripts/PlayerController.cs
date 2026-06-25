@@ -420,6 +420,7 @@ public class PlayerController : NetworkBehaviour
     public void OnMobileJumpPressed()
     {
         if (!IsOwner || isStunned) return;
+        if (BaseMinigameManager.ActiveMinigame != null && !BaseMinigameManager.ActiveMinigame.IsGameStarted) return;
         if (isGrounded)
         {
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
@@ -430,6 +431,7 @@ public class PlayerController : NetworkBehaviour
     public void OnMobileJumpHeld()
     {
         if (!IsOwner || isStunned) return;
+        if (BaseMinigameManager.ActiveMinigame != null && !BaseMinigameManager.ActiveMinigame.IsGameStarted) return;
         if (isGrounded && Time.time >= nextJumpTime)
         {
             rb.linearVelocity = new Vector3(rb.linearVelocity.x, jumpForce, rb.linearVelocity.z);
@@ -441,6 +443,7 @@ public class PlayerController : NetworkBehaviour
     public void OnMobilePunchPressed()
     {
         if (!IsOwner || isStunned) return;
+        if (BaseMinigameManager.ActiveMinigame != null && !BaseMinigameManager.ActiveMinigame.IsGameStarted) return;
         if (Time.time >= nextPunchTime)
         {
             PunchActionServerRpc();

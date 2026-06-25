@@ -5888,7 +5888,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MobileControlSpawner
   mobileControlsPrefab: {fileID: 1853301553063631408, guid: 6536147063592694581b3e27a65eaeeb, type: 3}
-  forceShowInEditor: 1
+  forceShowInEditor: 0
 --- !u!4 &1546400226
 Transform:
   m_ObjectHideFlags: 0

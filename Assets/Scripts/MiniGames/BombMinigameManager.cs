@@ -68,7 +68,7 @@ public class BombMinigameManager : BaseMinigameManager
     {
         isGameStarted.Value = false;
 
-        for (int i = 3; i > 0; i--) // Bomba haritası için 3 saniye idealdir
+        for (int i = 4; i > 0; i--) // Bomba haritası için 3 saniye idealdir
         {
             ShowCountdownClientRpc(i.ToString(), false);
             yield return new WaitForSeconds(1f);
