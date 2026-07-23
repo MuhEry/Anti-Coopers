@@ -43,4 +43,14 @@ public class MobileTouchpadCamera : MonoBehaviour, IPointerDownHandler, IDragHan
         if (eventData.pointerId == activePointerId)
             activePointerId = -1;
     }
+
+    private void OnEnable()
+    {
+        activePointerId = -1;
+    }
+
+    private void OnDisable()
+    {
+        activePointerId = -1;
+    }
 }

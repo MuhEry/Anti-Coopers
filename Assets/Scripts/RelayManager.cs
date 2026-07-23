@@ -41,12 +41,14 @@ public class RelayManager : MonoBehaviour
     
     private Dictionary<ulong, int> clientSlots = new Dictionary<ulong, int>();
     private bool isGameInProgress = false; 
+    private bool isConnecting = false;
     private bool isIntentionallyLeaving = false; 
     private string currentJoinCode = "";
     private List<string> gamePlaylist = new List<string>();
     private bool showingScoreboard = false;
     private int currentMapIndex = 0;
     private Dictionary<ulong, int> playerScores = new Dictionary<ulong, int>();
+    private Dictionary<ulong, int> lastMatchPoints = new Dictionary<ulong, int>();
     private bool isReturningToLobby = false;
 
     private void Awake()
@@ -154,6 +156,7 @@ public class RelayManager : MonoBehaviour
         isGameInProgress = false;
         gamePlaylist.Clear();
         playerScores.Clear();
+        lastMatchPoints.Clear();
         UpdatePlaylistUI();
         UpdatePlayerListUI();
         if (lobbyCodeText != null) 
@@ -281,6 +284,10 @@ public class RelayManager : MonoBehaviour
 
     public async void CreateRelay()
     {
+        if (isConnecting) return;
+        isConnecting = true;
+        ShowError("Creating Room...");
+
         SetNicknameBeforeConnect();
         await SafeShutdownNetwork(); 
 
@@ -319,23 +326,33 @@ public class RelayManager : MonoBehaviour
                 NetworkManager.Singleton.SceneManager.OnLoadEventCompleted -= OnSceneLoadCompleted;
                 NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += OnSceneLoadCompleted;
             }
+            isConnecting = false;
         }
-        catch (RelayServiceException e) { Debug.LogError("Relay hatası: " + e.Message); }
+        catch (RelayServiceException e) 
+        { 
+            Debug.LogError("Relay hatası: " + e.Message); 
+            ShowError("Failed to create room!");
+            isConnecting = false;
+        }
     }
 
     public async void JoinRelay() 
     {
+        if (isConnecting) return;
+        isConnecting = true;
+
         SetNicknameBeforeConnect();
         await SafeShutdownNetwork(); 
 
         try
         {
-            if (codeInputField == null) return;
+            if (codeInputField == null) { isConnecting = false; return; }
             string joinCode = codeInputField.text; 
             
             if (string.IsNullOrWhiteSpace(joinCode))
             {
                 ShowError("Invalid code!");
+                isConnecting = false;
                 return;
             }
 
@@ -352,10 +369,12 @@ public class RelayManager : MonoBehaviour
                 NetworkManager.Singleton.StartClient();
                 if (lobbyCodeText != null) lobbyCodeText.text = "ROOM CODE: " + joinCode;
             }
+            isConnecting = false;
         }
         catch (System.Exception) 
         { 
             ShowError("Invalid code! Room not found or connection failed."); 
+            isConnecting = false;
         }
     }
 
@@ -465,11 +484,20 @@ public class RelayManager : MonoBehaviour
         if (!NetworkManager.Singleton.IsServer) return;
         if (playerScores.ContainsKey(clientId)) { playerScores[clientId] += points; }
         else { playerScores.Add(clientId, points); }
+
+        if (lastMatchPoints.ContainsKey(clientId)) { lastMatchPoints[clientId] += points; }
+        else { lastMatchPoints.Add(clientId, points); }
     }
 
     public int GetPlayerScore(ulong clientId)
     {
         if (playerScores.TryGetValue(clientId, out int score)) return score;
+        return 0;
+    }
+
+    public int GetLastMatchPoints(ulong clientId)
+    {
+        if (lastMatchPoints.TryGetValue(clientId, out int score)) return score;
         return 0;
     }
 
@@ -492,6 +520,7 @@ public class RelayManager : MonoBehaviour
         {
             showingScoreboard = false;
             currentMapIndex++;
+            lastMatchPoints.Clear();
 
             if (currentMapIndex < gamePlaylist.Count)
             {
@@ -559,6 +588,7 @@ public class RelayManager : MonoBehaviour
         isGameInProgress = false;
         gamePlaylist.Clear();
         playerScores.Clear(); 
+        lastMatchPoints.Clear();
         clientSlots.Clear(); 
         
         if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "MainMenu")

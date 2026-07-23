@@ -22,10 +22,14 @@ public class ScoreboardManager : NetworkBehaviour
 
             // 2. Ağ verilerini topla (Sadece sunucu görebilir)
             var connectedIds = NetworkManager.Singleton.ConnectedClientsIds.ToArray();
-            int[] scores = new int[connectedIds.Length];
+            int[] oldScores = new int[connectedIds.Length];
+            int[] newScores = new int[connectedIds.Length];
             for (int i = 0; i < connectedIds.Length; i++)
             {
-                scores[i] = RelayManager.Instance.GetPlayerScore(connectedIds[i]);
+                int currentTotal = RelayManager.Instance.GetPlayerScore(connectedIds[i]);
+                int gained = RelayManager.Instance.GetLastMatchPoints(connectedIds[i]);
+                newScores[i] = currentTotal;
+                oldScores[i] = currentTotal - gained;
             }
 
             // Playlist durumunu hesapla
@@ -33,7 +37,7 @@ public class ScoreboardManager : NetworkBehaviour
             int totalMatches = RelayManager.Instance.GetPlaylistCount();
 
             // 3. SİHİRLİ DOKUNUŞ: Tüm verilere misafirlere fırlatıyoruz!
-            SyncScoreboardClientRpc(connectedIds, scores, currentMatch, totalMatches);
+            SyncScoreboardClientRpc(connectedIds, oldScores, newScores, currentMatch, totalMatches);
         }
         else
         {
@@ -44,7 +48,12 @@ public class ScoreboardManager : NetworkBehaviour
     }
 
     [ClientRpc]
-    private void SyncScoreboardClientRpc(ulong[] playerIds, int[] scores, int currentMatch, int totalMatches)
+    private void SyncScoreboardClientRpc(ulong[] playerIds, int[] oldScores, int[] newScores, int currentMatch, int totalMatches)
+    {
+        StartCoroutine(AnimateScoreboard(playerIds, oldScores, newScores, currentMatch, totalMatches));
+    }
+
+    private System.Collections.IEnumerator AnimateScoreboard(ulong[] playerIds, int[] oldScores, int[] newScores, int currentMatch, int totalMatches)
     {
         // A. Kaç Oyun Kaldı Bilgisini Güncelleme
         if (matchInfoText != null)
@@ -64,10 +73,41 @@ public class ScoreboardManager : NetworkBehaviour
             else
             {
                 int remainingGames = totalMatches - currentMatch;
-                matchInfoText.text = $"Current Match: {currentMatch} / {totalMatches}\n<color=green>Remaining Matches: {remainingGames}</color>";            }
+                matchInfoText.text = $"Current Match: {currentMatch} / {totalMatches}\n<color=green>Remaining Matches: {remainingGames}</color>";
+            }
         }
 
-        // B. Skor Tablosunu Oluşturma (Gelen verileri büyükten küçüğe sırala)
+        // B. Skor Tablosunu Animasyonlu Oluşturma
+        float duration = 2.0f; // Animasyon 2 saniye sürecek
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            List<(ulong id, int score)> currentData = new List<(ulong, int)>();
+            for (int i = 0; i < playerIds.Length; i++)
+            {
+                int val = Mathf.RoundToInt(Mathf.Lerp(oldScores[i], newScores[i], t));
+                currentData.Add((playerIds[i], val));
+            }
+
+            BuildScoreboardText(currentData, currentMatch, totalMatches);
+            yield return null; // Bir sonraki frame'e geç
+        }
+
+        // Animasyon bittiğinde kesin final skorlarını yazdır
+        List<(ulong id, int score)> finalData = new List<(ulong, int)>();
+        for (int i = 0; i < playerIds.Length; i++)
+        {
+            finalData.Add((playerIds[i], newScores[i]));
+        }
+        BuildScoreboardText(finalData, currentMatch, totalMatches);
+    }
+
+    private void BuildScoreboardText(List<(ulong id, int score)> playerDataList, int currentMatch, int totalMatches)
+    {
         if (scoreboardText == null || RelayManager.Instance == null) return;
 
         bool isFinalScoreboard = currentMatch >= totalMatches;
@@ -82,12 +122,6 @@ public class ScoreboardManager : NetworkBehaviour
             scoreboardText.text = "<color=yellow>CURRENT SCORE STATUS</color>\n\n";
         }
 
-        List<(ulong id, int score)> playerDataList = new List<(ulong, int)>();
-        for (int i = 0; i < playerIds.Length; i++)
-        {
-            playerDataList.Add((playerIds[i], scores[i]));
-        }
-        
         var sortedPlayers = playerDataList.OrderByDescending(p => p.score).ToList();
 
         int rank = 1;
