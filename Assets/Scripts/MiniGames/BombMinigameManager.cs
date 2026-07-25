@@ -48,6 +48,8 @@ public class BombMinigameManager : BaseMinigameManager
             activeBombVisual.SetActive(false);
         }
 
+        currentBombHolderId.OnValueChanged += OnBombHolderChanged;
+
         if (IsServer)
         {
             foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
@@ -321,6 +323,28 @@ public class BombMinigameManager : BaseMinigameManager
         else
         {
             activeBombVisual.SetActive(false);
+        }
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        base.OnNetworkDespawn();
+        currentBombHolderId.OnValueChanged -= OnBombHolderChanged;
+    }
+
+    private void OnBombHolderChanged(ulong oldHolderId, ulong newHolderId)
+    {
+        PlayerController[] allPlayers = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
+        foreach (var player in allPlayers)
+        {
+            if (player.OwnerClientId == oldHolderId)
+            {
+                player.moveSpeed = 7f; // Hızı normale döndür
+            }
+            if (player.OwnerClientId == newHolderId)
+            {
+                player.moveSpeed = 7f * 1.2f; // Bomba olan oyuncuya %20 hız bonusu
+            }
         }
     }
 }

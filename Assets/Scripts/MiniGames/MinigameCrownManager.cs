@@ -84,7 +84,7 @@ public class MinigameCrownManager : BaseMinigameManager
                 timeRemaining.Value -= 1f;
                 // Kral hayattaysa her saniye 2 puan kazanır
                 if (currentKingId.Value != 99999)
-                    RelayManager.Instance.AddScore(currentKingId.Value, 1);
+                    RelayManager.Instance.AddScore(currentKingId.Value, 2);
             }
         }
         gameStarted.Value = false;

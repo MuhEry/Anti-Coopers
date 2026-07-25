@@ -3649,7 +3649,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MinigameCrownManager
   ShowTopMostFoldoutHeaderGroup: 1
-  gameDuration: 120
+  gameDuration: 60
   crownObject: {fileID: 299631453}
   timerText: {fileID: 591570388}
   countdownText: {fileID: 1078965934}

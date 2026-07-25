@@ -6,7 +6,7 @@ using TMPro;
 public class PlayerController : NetworkBehaviour
 {
     [Header("Hareket Ayarları")]
-    [SerializeField] private float moveSpeed = 7f;
+    public float moveSpeed = 7f;
     [SerializeField] private float jumpForce = 6f; 
     [SerializeField] private Animator animator;
 
