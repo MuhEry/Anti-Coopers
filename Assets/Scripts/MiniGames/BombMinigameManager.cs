@@ -339,11 +339,11 @@ public class BombMinigameManager : BaseMinigameManager
         {
             if (player.OwnerClientId == oldHolderId)
             {
-                player.moveSpeed = 7f; // Hızı normale döndür
+                player.moveSpeed = 4f; // Hızı normale döndür
             }
             if (player.OwnerClientId == newHolderId)
             {
-                player.moveSpeed = 7f * 1.2f; // Bomba olan oyuncuya %20 hız bonusu
+                player.moveSpeed = 4f * 1.2f; // Bomba olan oyuncuya %10 hız bonusu
             }
         }
     }

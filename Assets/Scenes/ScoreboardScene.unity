@@ -362,7 +362,27 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: SCOREBOARD
+  m_text: '<color=#00FFFF>Oyuncu 1 - 500 Puan</color>
+
+    <color=#000000>Oyuncu
+    2 - 450 Puan</color>
+
+    <color=#FF0000>Oyuncu 3 - 400 Puan</color>
+
+    <color=#0000FF>Oyuncu
+    4 - 350 Puan</color>
+
+    <color=#FFFF00>Oyuncu 5 - 300 Puan</color>
+
+    <color=#970094>Oyuncu
+    6 - 250 Puan</color>
+
+    <color=#007300>Oyuncu 7 - 200 Puan</color>
+
+    <color=#FFFFFF>Oyuncu
+    8 - 150 Puan</color>
+
+'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6fc0eb31bc7dac94580f281dc8ad33d2, type: 2}
   m_sharedMaterial: {fileID: 4478792535856906682, guid: 6fc0eb31bc7dac94580f281dc8ad33d2, type: 2}
@@ -395,7 +415,7 @@ MonoBehaviour:
   m_enableAutoSizing: 1
   m_fontSizeMin: 18
   m_fontSizeMax: 70
-  m_fontStyle: 0
+  m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535

@@ -141,35 +141,39 @@ public class MinigameLavaManager : BaseMinigameManager
     [ClientRpc]
     private void EliminatePlayerClientRpc(ulong eliminatedId, int score)
     {
-        // Elenen kişi "BİZ" isek
+        // 1. HERKES İÇİN: Ölen oyuncuyu sahnede bul ve tamamen gizle
+        PlayerController[] allPlayers = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
+        foreach (var player in allPlayers)
+        {
+            if (player.OwnerClientId == eliminatedId)
+            {
+                player.gameObject.SetActive(false);
+                break;
+            }
+        }
+
+        // 2. SADECE ELENEN KİŞİ İÇİN (Kamera ve Arayüz değişiklikleri)
         if (NetworkManager.Singleton.LocalClientId == eliminatedId)
         {
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.deathSound);
             }
-            // 1. Karakteri dondur
-            var playerObj = NetworkManager.Singleton.LocalClient?.PlayerObject;
-            if (playerObj != null)
-            {
-                var pc = playerObj.GetComponent<PlayerController>();
-                if (pc != null) pc.enabled = false;
-            }
 
-            // 2. UI Bildirimi
+            // UI Bildirimi
             if (statusText != null)
             {
                 statusText.gameObject.SetActive(true);
                 statusText.text = $"<color=red>YOU ARE ELIMINATED!</color>\n<size=40>+{score} Points</size>";
             }
 
-            // 3. KAMERA GARANTİSİ: İsimle aramak yerine sahnede çalışan tüm oyuncu kameralarını zorla kapatıyoruz
+            // KAMERA GARANTİSİ: İsimle aramak yerine sahnede çalışan tüm oyuncu kameralarını zorla kapatıyoruz
             var vCams = FindObjectsByType<Unity.Cinemachine.CinemachineCamera>(FindObjectsSortMode.None);
             foreach (var vCam in vCams) vCam.gameObject.SetActive(false);
 
             if (Camera.main != null) Camera.main.gameObject.SetActive(false);
 
-            // 4. Editörden bağladığımız İzleyici Kamerasını açıyoruz (Asla şaşmaz)
+            // Editörden bağladığımız İzleyici Kamerasını açıyoruz
             if (Instance.spectatorCamera != null)
             {
                 Instance.spectatorCamera.SetActive(true);
